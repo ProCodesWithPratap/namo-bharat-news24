@@ -460,7 +460,7 @@ $('#siteSettingsForm').addEventListener('submit', async (e) => {
     $$('.toggle-section').forEach((btn) => { visibleSections[btn.dataset.name] = btn.dataset.active !== 'false'; });
     const payload = formToObject(form);
     payload.visibleSections = visibleSections;
-    await api('/api/admin/site-data', { method:'PUT', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
+    await api('/api/settings', { method:'PUT', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
     await refreshAdmin();
     toast('Site settings saved');
   } catch (err) { toast(err.message); }

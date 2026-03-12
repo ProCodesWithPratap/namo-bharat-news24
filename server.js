@@ -192,8 +192,9 @@ app.use((req, res, next) => {
 });
 
 app.use((req, res, next) => {
- if (req.path === '/healthz' || req.path === '/readyz') return next();
-  if (FORCE_HTTPS && !req.secure && req.get('x-forwarded-proto') !== 'https') {
+  if (req.path === '/healthz' || req.path === '/readyz') return next();
+  const forwardedProto = String(req.get('x-forwarded-proto') || '').split(',')[0].trim().toLowerCase();
+  if (FORCE_HTTPS && !req.secure && forwardedProto !== 'https') {
     return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
   }
   next();
@@ -232,6 +233,10 @@ app.use(express.static(PUBLIC_DIR, {
       res.setHeader('Cache-Control', 'public, max-age=3600');
     }
   }
+}));
+app.use('/admin', express.static(PUBLIC_DIR, {
+  index: false,
+  maxAge: IS_PROD ? '1h' : 0
 }));
 
 const loginLimiter = rateLimit({
@@ -1396,6 +1401,11 @@ app.get('/api/admin/backup.json', requireAuth, requirePermission('users.manage')
   } catch (_error) {
     res.status(500).json({ message: 'Failed to create backup' });
   }
+});
+
+app.put('/api/admin/site-data', requireAuth, requirePermission('content.manage'), requireCsrf, (req, _res, next) => {
+  req.url = '/api/settings';
+  next();
 });
 
 app.put('/api/settings', requireAuth, requirePermission('content.manage'), requireCsrf, async (req, res) => {
