@@ -405,12 +405,13 @@ $('#sidebarToggleBtn')?.addEventListener('click', () => {
 });
 $('#loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const form = e.currentTarget;
   try {
-    const payload = formToObject(e.currentTarget);
+    const payload = formToObject(form);
     const data = await api('/api/login', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
     if (data.requiresTwoFactor) {
       $('#totpWrap').classList.remove('hidden');
-      e.currentTarget.preAuthToken.value = data.preAuthToken;
+      form.preAuthToken.value = data.preAuthToken;
       return toast('Password accepted. Enter your 2FA code now.');
     }
     state.authenticated = true;
@@ -445,9 +446,10 @@ $('#resetRequestForm').addEventListener('submit', async (e) => {
 });
 $('#resetPasswordForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const form = e.currentTarget;
   try {
-    await api('/api/auth/reset-password', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(formToObject(e.currentTarget)) });
-    e.currentTarget.reset();
+    await api('/api/auth/reset-password', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(formToObject(form)) });
+    form.reset();
     toast('Password updated');
     history.replaceState({}, '', '/admin');
   } catch (err) { toast(err.message); }
@@ -486,9 +488,10 @@ $('#uploadLogoBtn').addEventListener('click', async () => {
 });
 $('#categoryForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const form = e.currentTarget;
   try {
-    await api('/api/categories', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(formToObject(e.currentTarget)) });
-    e.currentTarget.reset();
+    await api('/api/categories', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(formToObject(form)) });
+    form.reset();
     await refreshAdmin();
     toast('Category created');
   } catch (err) { toast(err.message); }
@@ -520,14 +523,15 @@ $('#categoryList').addEventListener('click', async (e) => {
 });
 $('#articleForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const form = e.currentTarget;
   try {
-    const fd = new FormData(e.currentTarget);
+    const fd = new FormData(form);
     if (fd.get('featured') === null) fd.set('featured', 'false');
     if (fd.get('trending') === null) fd.set('trending', 'false');
     const id = fd.get('articleId');
     await api(id ? `/api/articles/${encodeURIComponent(id)}` : '/api/articles', { method: id ? 'PUT' : 'POST', body: fd });
-    e.currentTarget.reset();
-    e.currentTarget.articleId.value = '';
+    form.reset();
+    form.articleId.value = '';
     await refreshAdmin();
     toast(id ? 'Article updated' : 'Article created');
   } catch (err) { toast(err.message); }
@@ -565,12 +569,13 @@ $('#articleList').addEventListener('click', async (e) => {
 });
 $('#reporterForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const form = e.currentTarget;
   try {
-    const fd = new FormData(e.currentTarget);
+    const fd = new FormData(form);
     const id = fd.get('reporterId');
     await api(id ? `/api/reporters/${encodeURIComponent(id)}` : '/api/reporters', { method: id ? 'PUT' : 'POST', body: fd });
-    e.currentTarget.reset();
-    e.currentTarget.reporterId.value = '';
+    form.reset();
+    form.reporterId.value = '';
     await refreshAdmin();
     toast(id ? 'Reporter updated' : 'Reporter created');
   } catch (err) { toast(err.message); }
@@ -613,12 +618,13 @@ $('#reporterList').addEventListener('click', async (e) => {
 });
 $('#paymentForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const form = e.currentTarget;
   try {
-    const payload = formToObject(e.currentTarget);
+    const payload = formToObject(form);
     const id = payload.paymentId;
     await api(id ? `/api/payments/${encodeURIComponent(id)}` : '/api/payments', { method: id ? 'PUT' : 'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
-    e.currentTarget.reset();
-    e.currentTarget.paymentId.value = '';
+    form.reset();
+    form.paymentId.value = '';
     await refreshAdmin();
     toast(id ? 'Payment updated' : 'Payment created');
   } catch (err) { toast(err.message); }
@@ -656,9 +662,10 @@ $('#paymentList').addEventListener('click', async (e) => {
 });
 $('#changePasswordForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const form = e.currentTarget;
   try {
-    await api('/api/auth/change-password', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(formToObject(e.currentTarget)) });
-    e.currentTarget.reset();
+    await api('/api/auth/change-password', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(formToObject(form)) });
+    form.reset();
     toast('Password changed');
   } catch (err) { toast(err.message); }
 });
@@ -678,28 +685,31 @@ $('#start2faBtn').addEventListener('click', async () => {
 });
 $('#enable2faForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const form = e.currentTarget;
   try {
-    await api('/api/auth/enable-2fa', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(formToObject(e.currentTarget)) });
+    await api('/api/auth/enable-2fa', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(formToObject(form)) });
     $('#twoFactorSetup').classList.add('hidden');
-    e.currentTarget.reset();
+    form.reset();
     await refreshAdmin();
     toast('2FA enabled');
   } catch (err) { toast(err.message); }
 });
 $('#disable2faForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const form = e.currentTarget;
   try {
-    await api('/api/auth/disable-2fa', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(formToObject(e.currentTarget)) });
-    e.currentTarget.reset();
+    await api('/api/auth/disable-2fa', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(formToObject(form)) });
+    form.reset();
     await refreshAdmin();
     toast('2FA disabled');
   } catch (err) { toast(err.message); }
 });
 $('#userForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const form = e.currentTarget;
   try {
-    const payload = formToObject(e.currentTarget);
-    payload.active = e.currentTarget.active.checked;
+    const payload = formToObject(form);
+    payload.active = form.active.checked;
     if (!payload.userId && !passwordPolicyHint(payload.password || '')) throw new Error('Use 10+ chars with upper, lower, number, symbol');
     const id = payload.userId;
     if (id) {
@@ -711,9 +721,9 @@ $('#userForm').addEventListener('submit', async (e) => {
       await api('/api/admin/users', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
       toast('User created');
     }
-    e.currentTarget.reset();
-    e.currentTarget.userId.value = '';
-    e.currentTarget.username.disabled = false;
+    form.reset();
+    form.userId.value = '';
+    form.username.disabled = false;
     await refreshAdmin();
   } catch (err) { toast(err.message); }
 });
