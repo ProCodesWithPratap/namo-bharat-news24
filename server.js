@@ -122,7 +122,7 @@ class RedisSessionStore extends session.Store {
     const ttlMs = sess?.cookie?.expires
       ? Math.max(new Date(sess.cookie.expires).getTime() - Date.now(), 1_000)
       : 1000 * 60 * 60 * 2;
-    this.client.pexpire(this.prefix + sid, ttlMs)
+    this.client.pExpire(this.prefix + sid, ttlMs)
       .then(() => callback(null))
       .catch((error) => callback(error));
   }
