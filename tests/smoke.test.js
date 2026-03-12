@@ -75,6 +75,17 @@ test('assistant builders exist and category rename no longer uses prompt', () =>
   assert.match(adminJs, /categoryRenameForm/);
 });
 
+
+test('admin settings save uses /api/settings and server keeps backward-compatible site-data route', () => {
+  assert.match(adminJs, /api\('\/api\/settings'/);
+  assert.match(server, /app.put\('\/api\/admin\/site-data'/);
+  assert.match(server, /app.put\('\/api\/settings'/);
+});
+
+test('https redirect middleware handles forwarded proto lists', () => {
+  assert.match(server, /split\(','\)\[0\]\.trim\(\)\.toLowerCase\(\)/);
+});
+
 test('admin UX hardening includes modal controls and password hints', () => {
   assert.match(adminJs, /function openModal\(/);
   assert.match(adminJs, /function closeModal\(/);
