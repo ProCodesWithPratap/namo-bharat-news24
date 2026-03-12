@@ -192,6 +192,7 @@ app.use((req, res, next) => {
 });
 
 app.use((req, res, next) => {
+ if (req.path === '/healthz' || req.path === '/readyz') return next();
   if (FORCE_HTTPS && !req.secure && req.get('x-forwarded-proto') !== 'https') {
     return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
   }
@@ -1865,9 +1866,9 @@ process.on('uncaughtException', (error) => {
 async function start() {
   await redisClient.connect();
   await migrate();
-  const server = app.listen(PORT, () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     isReady = true;
-    console.log(`Namo Bharat News 24 running on http://localhost:${PORT}`);
+    console.log(`Namo Bharat News 24 running on http://'0.0.0.0':${PORT}`);
   });
 
   const shutdown = async (signal) => {
