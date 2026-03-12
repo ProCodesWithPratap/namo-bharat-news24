@@ -1,0 +1,30 @@
+{
+  "name": "namo-bharat-news24-launch-v6",
+  "version": "7.2.0",
+  "private": true,
+  "description": "Namo Bharat News 24 production-style stack with PostgreSQL, Redis sessions, password reset, and TOTP 2FA",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "NODE_ENV=development node server.js",
+    "start:prod": "NODE_ENV=production node server.js",
+    "test": "node --test",
+    "lint:basic": "node --check server.js && node --check public/admin.js",
+    "healthcheck": "node scripts/healthcheck.js",
+    "backup:manifest": "node scripts/backup-manifest.js"
+  },
+  "dependencies": {
+    "compression": "^1.8.0",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "helmet": "^8.1.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.10.1",
+    "otplib": "^12.0.1",
+    "pg": "^8.13.1",
+    "qrcode": "^1.5.4",
+    "redis": "^4.7.0"
+  }
+}

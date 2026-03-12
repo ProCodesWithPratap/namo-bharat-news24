@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Namo Bharat News 24 — Admin</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="auth-wrap" id="loginView">
+    <div class="auth-card">
+      <h1>Namo Bharat News 24</h1>
+      <p class="muted">Production-style admin with PostgreSQL, Redis sessions, password reset flow, and TOTP 2FA.</p>
+      <form id="loginForm">
+        <label>Username <input name="username" required autocomplete="username"></label>
+        <label>Password <input type="password" name="password" required autocomplete="current-password"></label>
+        <label class="hidden" id="totpWrap">2FA code <input name="totp" inputmode="numeric" autocomplete="one-time-code"></label>
+        <input type="hidden" name="preAuthToken">
+        <div class="toolbar">
+          <button class="btn primary" type="submit">Login</button>
+          <button class="btn" type="button" id="showResetBtn">Forgot password</button>
+        </div>
+      </form>
+
+      <form id="resetRequestForm" class="hidden" style="margin-top:14px">
+        <label>Username or email <input name="identity" required></label>
+        <div class="toolbar">
+          <button class="btn" type="submit">Request reset link</button>
+          <button class="btn ghost" type="button" id="hideResetBtn">Cancel</button>
+        </div>
+        <div id="resetPreview" class="preview-box hidden" style="margin-top:10px"></div>
+      </form>
+
+      <form id="resetPasswordForm" class="hidden" style="margin-top:14px">
+        <label>New password <input type="password" name="newPassword" required></label>
+        <input type="hidden" name="token">
+        <div class="toolbar">
+          <button class="btn primary" type="submit">Set new password</button>
+        </div>
+      </form>
+
+      <div class="notice" style="margin-top:14px">Bootstrap admin credentials are created from environment variables or written once to the server bootstrap file during first setup.</div>
+    </div>
+  </div>
+
+  <div class="admin-shell hidden" id="adminView">
+    <button class="mobile-admin-toggle btn ghost" id="sidebarToggleBtn" type="button" aria-expanded="false">Menu</button>
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="logo-wrap">
+        <div class="logo">NB</div>
+        <div>
+          <strong>Namo Bharat News 24</strong>
+          <div class="muted" id="whoami">Loading...</div>
+        </div>
+      </div>
+      <div class="admin-nav">
+        <button class="active" data-tab="dashboardTab">Dashboard</button>
+        <button data-tab="siteTab">Site Settings</button>
+        <button data-tab="categoriesTab">Categories</button>
+        <button data-tab="articlesTab">Articles</button>
+        <button data-tab="reportersTab">Reporters</button>
+        <button data-tab="paymentsTab">Payments</button>
+        <button data-tab="assistantTab">AI Studio</button>
+        <button data-tab="securityTab">Security</button>
+        <button data-tab="teamTab">Team Access</button>
+      </div>
+      <div class="toolbar" style="margin-top:16px">
+        <button class="btn ghost" id="backupBtn">Backup JSON</button>
+        <button class="btn" id="logoutBtn">Logout</button>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <section id="dashboardTab" class="panel admin-tab">
+        <h2>Dashboard</h2>
+        <div class="kpi-grid">
+          <div class="kpi">Articles<strong id="kpiArticles">0</strong></div>
+          <div class="kpi">Categories<strong id="kpiCategories">0</strong></div>
+          <div class="kpi">Reporters<strong id="kpiReporters">0</strong></div>
+          <div class="kpi">Collections<strong id="kpiCollections">₹0</strong></div>
+        </div>
+        <div class="split" style="margin-top:16px">
+          <div class="panel">
+            <h2 style="font-size:20px">System status</h2>
+            <div id="systemStatus" class="preview-box">Loading...</div>
+          </div>
+          <div class="panel">
+            <h2 style="font-size:20px">Recent audit</h2>
+            <div id="auditPreview" class="list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="siteTab" class="panel admin-tab hidden">
+        <h2>Site Settings</h2>
+        <form id="siteSettingsForm">
+          <div class="form-grid">
+            <label>Site name <input name="siteName" required></label>
+            <label>Tagline <input name="tagline"></label>
+            <label>Primary color <input name="primaryColor" type="color"></label>
+            <label>Background color <input name="backgroundColor" type="color"></label>
+            <label>Selected city <input name="selectedCity"></label>
+            <label>Contact email <input name="contactEmail" type="email"></label>
+            <label>Editor name <input name="editorName"></label>
+            <label>Office address <input name="officeAddress"></label>
+            <label>Hero article <select name="heroArticleId" id="heroArticleId"></select></label>
+            <label>Logo <input id="logoInput" type="file" accept="image/*"></label>
+          </div>
+          <label style="margin-top:12px">Breaking text <textarea name="breakingText"></textarea></label>
+          <label style="margin-top:12px">Footer text <textarea name="footerText"></textarea></label>
+          <div style="margin-top:12px">
+            <strong>Visible sections</strong>
+            <div id="sectionToggles" class="toolbar"></div>
+          </div>
+          <div class="toolbar">
+            <button class="btn primary" type="submit">Save settings</button>
+            <button class="btn" type="button" id="uploadLogoBtn">Upload logo</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="categoriesTab" class="panel admin-tab hidden">
+        <h2>Categories</h2>
+        <form id="categoryForm" class="inline">
+          <input name="name" placeholder="New category" required>
+          <button class="btn primary" type="submit">Add category</button>
+        </form>
+        <div id="categoryList" class="list" style="margin-top:14px"></div>
+      </section>
+
+      <section id="articlesTab" class="panel admin-tab hidden">
+        <div class="section-head"><h2>Articles</h2><input id="articleSearch" class="list-search" placeholder="Search title, category, location"></div>
+        <form id="articleForm">
+          <input type="hidden" name="articleId">
+          <div class="form-grid-3">
+            <label>Title <input name="title" required></label>
+            <label>Category <select name="category" id="articleCategory"></select></label>
+            <label>Location <input name="location"></label>
+            <label>Author <input name="author"></label>
+            <label>Published at <input name="publishedAt" type="datetime-local"></label>
+            <label>Image <input name="image" type="file" accept="image/*"></label>
+          </div>
+          <div class="inline" style="margin-top:12px">
+            <label><input type="checkbox" name="featured"> Featured</label>
+            <label><input type="checkbox" name="trending"> Trending</label>
+          </div>
+          <label style="margin-top:12px">Summary <textarea name="summary"></textarea></label>
+          <label style="margin-top:12px">Content <textarea name="content"></textarea></label>
+          <div class="toolbar">
+            <button class="btn primary" type="submit">Save article</button>
+            <button class="btn" type="button" id="resetArticleBtn">Clear</button>
+          </div>
+        </form>
+        <div id="articleList" class="list" style="margin-top:14px"></div>
+      </section>
+
+      <section id="reportersTab" class="panel admin-tab hidden">
+        <div class="section-head"><h2>Reporters</h2><input id="reporterSearch" class="list-search" placeholder="Search reporter, district, mobile"></div>
+        <form id="reporterForm">
+          <input type="hidden" name="reporterId">
+          <div class="form-grid-3">
+            <label>Name <input name="fullName" required></label>
+            <label>Designation <input name="designation" required></label>
+            <label>District <input name="district" required></label>
+            <label>State <input name="state"></input></label>
+            <label>Mobile <input name="mobile" required></label>
+            <label>Email <input name="email" type="email"></label>
+            <label>Join date <input name="joinDate" type="date"></label>
+            <label>Status <input name="status"></label>
+            <label>ID card no <input name="idCardNo"></label>
+            <label>Letter no <input name="letterNo"></label>
+            <label>Photo <input name="photo" type="file" accept="image/*"></label>
+          </div>
+          <label style="margin-top:12px">Address <textarea name="address"></textarea></label>
+          <label style="margin-top:12px">Notes <textarea name="notes"></textarea></label>
+          <div class="toolbar">
+            <button class="btn primary" type="submit">Save reporter</button>
+            <button class="btn" type="button" id="resetReporterBtn">Clear</button>
+          </div>
+        </form>
+        <div id="reporterList" class="list" style="margin-top:14px"></div>
+      </section>
+
+      <section id="paymentsTab" class="panel admin-tab hidden">
+        <div class="section-head"><h2>Payments</h2><input id="paymentSearch" class="list-search" placeholder="Search payment, mode, status, reference"></div>
+        <form id="paymentForm">
+          <input type="hidden" name="paymentId">
+          <div class="form-grid-3">
+            <label>Reporter <select name="reporterId" id="paymentReporter"></select></label>
+            <label>Amount <input name="amount" type="number" min="0" step="0.01"></label>
+            <label>Type <input name="type"></label>
+            <label>Status <input name="status"></label>
+            <label>Date <input name="date" type="date"></label>
+            <label>Mode <input name="mode"></label>
+            <label>Reference <input name="reference"></label>
+          </div>
+          <label style="margin-top:12px">Notes <textarea name="notes"></textarea></label>
+          <div class="toolbar">
+            <button class="btn primary" type="submit">Save payment</button>
+            <button class="btn" type="button" id="resetPaymentBtn">Clear</button>
+          </div>
+        </form>
+        <div id="paymentList" class="list" style="margin-top:14px"></div>
+      </section>
+
+      <section id="assistantTab" class="panel admin-tab hidden">
+        <h2>AI Studio</h2>
+        <div class="grid-2">
+          <div class="panel">
+            <h2 style="font-size:20px">Newsroom assistant</h2>
+            <div class="toolbar quick-actions" id="adminAiQuickActions">
+              <button class="btn ghost" type="button" data-prompt="Give me 3 sharper headline options for the current article draft.">Headlines</button>
+              <button class="btn ghost" type="button" data-prompt="Write a tighter summary and SEO description for the current article draft.">SEO</button>
+              <button class="btn ghost" type="button" data-prompt="Review the current article draft for clarity, legal risk, and newsroom quality.">Review</button>
+              <button class="btn ghost" type="button" data-prompt="Give me admin priorities from current dashboard data.">Ops priorities</button>
+            </div>
+            <form id="adminAiForm">
+              <label>Ask assistant
+                <textarea name="message" id="adminAiMessage" placeholder="Example: Draft 3 cleaner Hindi headlines for the current article and point out weak lines."></textarea>
+              </label>
+              <div class="toolbar">
+                <button class="btn primary" type="submit">Run assistant</button>
+                <button class="btn" type="button" id="adminAiUseArticleBtn">Use current article form</button>
+              </div>
+            </form>
+          </div>
+          <div class="panel">
+            <h2 style="font-size:20px">Assistant output</h2>
+            <div id="adminAiOutput" class="preview-box assistant-output">Ask for headlines, summaries, SEO, risk review, or operational priorities.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="securityTab" class="panel admin-tab hidden">
+        <h2>Security</h2>
+        <div class="grid-2">
+          <div class="panel">
+            <h2 style="font-size:20px">Change password</h2>
+            <form id="changePasswordForm">
+              <label>Current password <input type="password" name="currentPassword" required></label>
+              <label>New password <input type="password" name="newPassword" required></label>
+              <label>2FA code <input name="totp" placeholder="Required if 2FA enabled"></label>
+              <div class="toolbar"><button class="btn primary" type="submit">Change password</button></div>
+            </form>
+          </div>
+          <div class="panel">
+            <h2 style="font-size:20px">Two-factor authentication</h2>
+            <div id="twoFactorState" class="notice">Checking status...</div>
+            <div class="toolbar" style="margin-top:10px">
+              <button class="btn" type="button" id="start2faBtn">Start 2FA setup</button>
+            </div>
+            <div id="twoFactorSetup" class="hidden" style="margin-top:12px">
+              <div class="preview-box" id="twoFactorPreview"></div>
+              <form id="enable2faForm" style="margin-top:12px">
+                <label>Verification code <input name="token" required></label>
+                <div class="toolbar"><button class="btn primary" type="submit">Enable 2FA</button></div>
+              </form>
+            </div>
+            <form id="disable2faForm" style="margin-top:12px">
+              <label>Password <input type="password" name="password"></label>
+              <label>Current 2FA code <input name="token"></label>
+              <div class="toolbar"><button class="btn" type="submit">Disable 2FA</button></div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="teamTab" class="panel admin-tab hidden">
+        <div class="section-head"><h2>Team Access</h2><input id="userSearch" class="list-search" placeholder="Search team by name, username, role"></div>
+        <form id="userForm">
+          <input type="hidden" name="userId">
+          <div class="form-grid-3">
+            <label>Full name <input name="fullName" required></label>
+            <label>Username <input name="username" required></label>
+            <label>Email <input name="email" type="email" required></label>
+            <label>Role
+              <select name="role">
+                <option value="viewer">viewer</option>
+                <option value="editor">editor</option>
+                <option value="operations">operations</option>
+                <option value="finance">finance</option>
+                <option value="superadmin">superadmin</option>
+              </select>
+            </label>
+            <label>Password <input name="password" type="password"></label>
+            <label class="inline" style="margin-top:28px"><input type="checkbox" name="active" checked> Active</label>
+          </div>
+          <div class="toolbar">
+            <button class="btn primary" type="submit">Save team member</button>
+            <button class="btn" type="button" id="resetUserBtn">Clear</button>
+          </div>
+        </form>
+        <div id="userList" class="list" style="margin-top:14px"></div>
+      </section>
+    </main>
+  </div>
+
+
+  <div class="modal-backdrop hidden" id="resetPasswordModal">
+    <div class="modal-card">
+      <h2>Reset team password</h2>
+      <form id="resetUserPasswordForm">
+        <input type="hidden" name="userId">
+        <label>Username <input name="username" readonly></label>
+        <label>New password <input name="newPassword" type="password" required minlength="10"></label>
+        <label>Confirm password <input name="confirmPassword" type="password" required minlength="10"></label>
+        <div class="toolbar">
+          <button class="btn primary" type="submit">Reset password</button>
+          <button class="btn ghost" type="button" id="cancelResetUserPasswordBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  
+  <div class="modal-backdrop hidden" id="categoryRenameModal">
+    <div class="modal-card">
+      <h2>Rename category</h2>
+      <form id="categoryRenameForm">
+        <input type="hidden" name="categoryId">
+        <label>New name <input name="name" required maxlength="40"></label>
+        <div class="toolbar">
+          <button class="btn primary" type="submit">Save name</button>
+          <button class="btn ghost" type="button" id="cancelCategoryRenameBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/admin.js"></script>
+</body>
+</html>
