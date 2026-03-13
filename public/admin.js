@@ -383,6 +383,7 @@ async function refreshAdmin() {
   applyBranding(state.data.settings);
   fillDashboard();
   fillSiteForm();
+  bindLogoUploadControls();
   fillCategories();
   fillArticles();
   fillReporters();
@@ -499,42 +500,80 @@ $('#sectionToggles').addEventListener('click', (e) => {
   btn.classList.toggle('primary', !active);
   btn.classList.toggle('ghost', active);
 });
-async function handleLogoUploadClick() {
-  console.log('[admin] upload logo button clicked');
-  const logoInput = document.getElementById('logoInput');
-  const uploadButton = document.getElementById('uploadLogoBtn');
-  if (!logoInput || !uploadButton) {
-    console.log('[admin] upload logo controls missing', { logoInputFound: Boolean(logoInput), uploadButtonFound: Boolean(uploadButton) });
-    return toast('Logo upload controls are unavailable');
-  }
-  const file = logoInput.files?.[0];
+function handleLogoUploadClick(e) {
+  e.preventDefault();
+  console.log('[admin] upload button clicked');
+
+  const input = document.getElementById('logoInput');
+  const fileCount = input?.files?.length || 0;
+  const file = input && input.files && input.files[0];
+  console.log('[admin] selected file count / file name:', fileCount, file?.name || '(none)');
+
   if (!file) {
-    console.log('[admin] upload logo aborted: no file selected');
-    return toast('Select a logo first');
+    console.log('[admin] no file selected');
+    return alert('Please choose a logo file first');
   }
-  try {
-    const fd = new FormData();
-    fd.append('logo', file, file.name);
-    console.log('[admin] upload logo request starting', { name: file.name, size: file.size, type: file.type });
-    const response = await api('/api/upload/logo', { method:'POST', body: fd });
-    console.log('[admin] upload logo response received', response);
-    if (response?.settings) state.data.settings = response.settings;
-    if (response?.logo) state.data.settings.logo = response.logo;
-    applyBranding(state.data.settings);
-    await refreshAdmin();
-    toast('Logo uploaded');
-  } catch (err) {
-    console.log('[admin] upload logo failed', err);
-    toast(err.message);
-  }
+
+  console.log('[admin] selected file:', file.name);
+
+  const fd = new FormData();
+  fd.append('logo', file);
+
+  console.log('[admin] before fetch POST');
+  console.log('[admin] sending upload request');
+
+  fetch('/api/upload/logo', {
+    method: 'POST',
+    body: fd
+  })
+    .then(async (res) => {
+      console.log('[admin] upload response status:', res.status);
+      const data = await res.json().catch(() => ({}));
+      console.log('[admin] upload response body:', data);
+      return { res, data };
+    })
+    .then(async ({ res, data }) => {
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+      const settingsPayload = data.settings ? data.settings : { logo: data.logo || data.url };
+      console.log('[admin] updating local/admin state with:', settingsPayload);
+
+      if (settingsPayload) {
+        state.data.settings = { ...state.data.settings, ...settingsPayload };
+        applyBranding(state.data.settings);
+      }
+
+      try {
+        await refreshAdmin();
+        console.log('[admin] settings update status: success');
+      } catch (refreshErr) {
+        console.log('[admin] settings update status: failed', refreshErr);
+      }
+
+      toast('Logo uploaded');
+    })
+    .catch((err) => {
+      console.error('[admin] upload failed:', err);
+      alert(err.message || 'Upload failed');
+    });
 }
 
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('#uploadLogoBtn');
-  if (!btn) return;
-  e.preventDefault();
-  handleLogoUploadClick();
-});
+function bindLogoUploadControls() {
+  const btn = document.getElementById('uploadLogoBtn');
+  if (btn && !btn.dataset.bound) {
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', handleLogoUploadClick);
+  }
+
+  if (!document.body.dataset.logoUploadDelegatedBound) {
+    document.body.dataset.logoUploadDelegatedBound = '1';
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('#uploadLogoBtn');
+      if (!btn) return;
+      handleLogoUploadClick(e);
+    });
+  }
+}
 $('#categoryForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.currentTarget;
