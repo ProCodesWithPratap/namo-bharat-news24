@@ -148,6 +148,29 @@ function rebuildSelect(selectEl, options, selectedValue = '') {
   });
   selectEl.value = selectedValue;
 }
+
+function applyBranding(settings = {}) {
+  const adminLogo = $('#adminBrandLogo');
+  if (adminLogo && settings.logo) {
+    adminLogo.textContent = '';
+    const img = document.createElement('img');
+    img.alt = 'logo';
+    img.src = settings.logo;
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'cover';
+    adminLogo.appendChild(img);
+  }
+  const faviconHref = settings.favicon || settings.logo || '/favicon.ico';
+  let link = document.querySelector('link[rel="icon"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    document.head.appendChild(link);
+  }
+  link.href = `${faviconHref}${faviconHref.includes('?') ? '&' : '?'}v=${Date.now()}`;
+}
+
 function fillSiteForm() {
   const form = $('#siteSettingsForm');
   const s = state.data.settings;
@@ -357,6 +380,7 @@ async function refreshAdmin() {
   state.permissions = data.permissions || [];
   state.csrfToken = data.csrfToken || state.csrfToken;
   $('#whoami').textContent = `${state.user.fullName} • ${state.user.role}`;
+  applyBranding(state.data.settings);
   fillDashboard();
   fillSiteForm();
   fillCategories();
@@ -480,8 +504,10 @@ $('#uploadLogoBtn').addEventListener('click', async () => {
   if (!file) return toast('Select a logo first');
   try {
     const fd = new FormData();
-    fd.append('logo', file);
-    await api('/api/upload/logo', { method:'POST', body: fd });
+    fd.append('logo', file, file.name);
+    const response = await api('/api/upload/logo', { method:'POST', body: fd });
+    if (response?.settings) state.data.settings = response.settings;
+    applyBranding(state.data.settings);
     await refreshAdmin();
     toast('Logo uploaded');
   } catch (err) { toast(err.message); }

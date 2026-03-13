@@ -36,6 +36,14 @@
         img.style.objectFit = 'cover';
         wrap.appendChild(img);
       }
+      const faviconHref = settings.favicon || settings.logo || '/favicon.ico';
+      let link = document.querySelector('link[rel="icon"]');
+      if(!link){
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = `${faviconHref}${faviconHref.includes('?') ? '&' : '?'}v=${Date.now()}`;
     }
     function renderHero(){
       const heroId = state.settings.heroArticleId;

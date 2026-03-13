@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Namo Bharat News 24</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="icon" href="/favicon.ico">
 </head>
 <body>
   <div class="topbar">
@@ -92,7 +93,7 @@
       <button class="btn ghost" id="assistantCloseBtn" type="button">Close</button>
     </div>
     <div class="assistant-body" id="assistantOutput">पूछें: आज की मुख्य खबर क्या है? किसी जिले की खबर दिखाओ। राजनीति का सार बताओ।</div>
-    <form id="assistantForm" class="assistant-form">
+    <form id="assistantForm" class="assistant-form" data-endpoint="/api/assistant/public">
       <textarea id="assistantMessage" name="message" placeholder="अपना सवाल लिखें"></textarea>
       <div class="toolbar">
         <button class="btn primary" type="submit">पूछें</button>
