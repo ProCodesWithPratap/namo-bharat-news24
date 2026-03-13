@@ -11,7 +11,9 @@
     "test": "node --test",
     "lint:basic": "node --check server.js && node --check public/admin.js",
     "healthcheck": "node scripts/healthcheck.js",
-    "backup:manifest": "node scripts/backup-manifest.js"
+    "backup:manifest": "node scripts/backup-manifest.js",
+    "lint": "npm run lint:basic",
+    "build": "node --check server.js && node --check public/admin.js && node --check public/home.js"
   },
   "dependencies": {
     "compression": "^1.8.0",

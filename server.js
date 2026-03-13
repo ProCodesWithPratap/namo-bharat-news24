@@ -250,7 +250,10 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many login attempts. Please try again later.' },
-  keyGenerator: (req) => `${req.ip}:${sanitizeText(req.body.username, '', 80).toLowerCase()}`
+  keyGenerator: (req) => {
+    const identity = sanitizeText(req.body.username ?? req.body.identity, '', 120).toLowerCase();
+    return `${req.ip}:${identity}`;
+  }
 });
 
 const sensitiveLimiter = rateLimit({
@@ -859,6 +862,13 @@ async function findUserByUsername(username, includeSecrets = true) {
     ...(includeSecrets ? { passwordHash: row.password_hash, totpSecret: row.totp_secret || '' } : {})
   };
 }
+
+async function findUserByLoginIdentity(identity, includeSecrets = true) {
+  const normalized = String(identity || '').trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized.includes('@')) return findUserByEmail(normalized, includeSecrets);
+  return findUserByUsername(normalized, includeSecrets);
+}
 async function findUserById(id, includeSecrets = false) {
   const fieldExtra = includeSecrets ? ', password_hash, totp_secret' : '';
   const row = await one(`
@@ -1173,7 +1183,7 @@ app.get('/api/admin/session', async (req, res) => {
 
 app.post('/api/login', loginLimiter, async (req, res, next) => {
   try {
-    const username = sanitizeText(req.body.username, '', 40).toLowerCase();
+    const loginIdentity = sanitizeText(req.body.username, '', 120).toLowerCase();
     const password = String(req.body.password || '');
     const totp = sanitizeText(req.body.totp, '', 20);
     const preAuthToken = sanitizeText(req.body.preAuthToken, '', 120);
@@ -1203,10 +1213,10 @@ app.post('/api/login', loginLimiter, async (req, res, next) => {
       });
     }
 
-    const user = await findUserByUsername(username, true);
+    const user = await findUserByLoginIdentity(loginIdentity, true);
     if (!user || !user.active) {
-      await addAuditLog(req, 'auth.login_failed', 'user', username, 'Unknown or inactive user');
-      return res.status(401).json({ message: 'Invalid username or password' });
+      await addAuditLog(req, 'auth.login_failed', 'user', loginIdentity || 'unknown', 'Unknown or inactive user');
+      return res.status(401).json({ message: 'Invalid username/email or password' });
     }
     const now = Date.now();
     if (user.lockedUntil && new Date(user.lockedUntil).getTime() > now) {
@@ -1218,7 +1228,7 @@ app.post('/api/login', loginLimiter, async (req, res, next) => {
       const lockIso = failedCount >= MAX_LOGIN_FAILURES ? new Date(now + LOCK_WINDOW_MS).toISOString() : null;
       await query(`UPDATE users SET failed_login_count=$2, locked_until=$3::timestamptz WHERE id=$1`, [user.id, lockIso ? 0 : failedCount, lockIso]);
       await addAuditLog(req, 'auth.login_failed', 'user', user.id, 'Incorrect password');
-      return res.status(401).json({ message: 'Invalid username or password' });
+      return res.status(401).json({ message: 'Invalid username/email or password' });
     }
 
     if (user.totpEnabled && user.totpSecret) {
