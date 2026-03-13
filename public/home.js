@@ -14,10 +14,25 @@
     function filteredArticles(){
       return state.articles.filter((article) => scoreArticle(article, state.search));
     }
+
+    function sanitizeImageCandidate(value){
+      const clean = String(value || '').trim();
+      if(!clean) return '';
+      if(/^\/uploads\/[a-zA-Z0-9._-]+$/.test(clean)) return clean;
+      if(/^https:\/\/[^\s]+$/i.test(clean)) return clean;
+      return '';
+    }
+    function firstValidLogo(candidates, fallback = ''){
+      for(const candidate of candidates || []){
+        const safe = sanitizeImageCandidate(candidate);
+        if(safe) return safe;
+      }
+      return fallback;
+    }
     function renderSiteLogo(settings){
       const wrap = byId('siteLogo');
       if(!wrap) return;
-      const logoUrl = settings.logo || settings.favicon || '';
+      const logoUrl = firstValidLogo([settings.logo, settings.logoUrl, settings?.branding?.logo, settings.favicon], '');
       wrap.textContent = '';
       if(!logoUrl){
         wrap.textContent = 'NB';
@@ -46,7 +61,7 @@
       byId('officeAddress').textContent = settings.officeAddress || '';
       byId('cityBtn').textContent = settings.selectedCity || 'पटना';
       renderSiteLogo(settings);
-      const faviconHref = settings.favicon || settings.logo || '/favicon.ico';
+      const faviconHref = firstValidLogo([settings.favicon, settings.logo, settings.logoUrl, settings?.branding?.logo], '/favicon.ico');
       let link = document.querySelector('link[rel="icon"]');
       if(!link){
         link = document.createElement('link');
