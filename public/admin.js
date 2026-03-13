@@ -519,11 +519,19 @@ function handleLogoUploadClick(e) {
   const fd = new FormData();
   fd.append('logo', file);
 
+  const csrfToken = state.csrfToken || '';
+  console.log('[admin] csrf token found:', csrfToken ? 'yes' : 'no');
+  if (!csrfToken) {
+    console.warn('[admin] csrf token missing before upload request');
+  }
+
   console.log('[admin] before fetch POST');
   console.log('[admin] sending upload request');
 
   fetch('/api/upload/logo', {
     method: 'POST',
+    credentials: 'same-origin',
+    headers: csrfToken ? { 'x-csrf-token': csrfToken } : undefined,
     body: fd
   })
     .then(async (res) => {
@@ -533,7 +541,11 @@ function handleLogoUploadClick(e) {
       return { res, data };
     })
     .then(async ({ res, data }) => {
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      if (!res.ok) throw new Error(data.message || data.error || 'Upload failed');
+
+      if (data.csrfToken) {
+        state.csrfToken = data.csrfToken;
+      }
 
       const settingsPayload = data.settings ? data.settings : { logo: data.logo || data.url };
       console.log('[admin] updating local/admin state with:', settingsPayload);
@@ -542,6 +554,8 @@ function handleLogoUploadClick(e) {
         state.data.settings = { ...state.data.settings, ...settingsPayload };
         applyBranding(state.data.settings);
       }
+
+      if (input) input.value = '';
 
       try {
         await refreshAdmin();
