@@ -92,3 +92,9 @@ test('admin UX hardening includes modal controls and password hints', () => {
   assert.match(adminJs, /passwordPolicyHint/);
   assert.match(styles, /prefers-reduced-motion/);
 });
+
+test('login supports username or email identity', () => {
+  assert.match(server, /async function findUserByLoginIdentity\(/);
+  assert.match(server, /findUserByEmail\(normalized, includeSecrets\)/);
+  assert.match(server, /Invalid username\/email or password/);
+});
