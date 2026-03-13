@@ -14,6 +14,26 @@
     function filteredArticles(){
       return state.articles.filter((article) => scoreArticle(article, state.search));
     }
+    function renderSiteLogo(settings){
+      const wrap = byId('siteLogo');
+      if(!wrap) return;
+      const logoUrl = settings.logo || settings.favicon || '';
+      wrap.textContent = '';
+      if(!logoUrl){
+        wrap.textContent = 'NB';
+        return;
+      }
+      const img = document.createElement('img');
+      img.alt = 'logo';
+      img.src = logoUrl;
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+      img.addEventListener('error', () => {
+        wrap.textContent = 'NB';
+      }, { once:true });
+      wrap.appendChild(img);
+    }
     function applyTheme(settings){
       document.documentElement.style.setProperty('--primary', settings.primaryColor || '#c4171e');
       document.documentElement.style.setProperty('--bg', settings.backgroundColor || '#f7f4ef');
@@ -25,17 +45,7 @@
       byId('footerText').textContent = settings.footerText || '';
       byId('officeAddress').textContent = settings.officeAddress || '';
       byId('cityBtn').textContent = settings.selectedCity || 'पटना';
-      if(settings.logo){
-        const wrap = byId('siteLogo');
-        wrap.textContent = '';
-        const img = document.createElement('img');
-        img.alt = 'logo';
-        img.src = settings.logo;
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.objectFit = 'cover';
-        wrap.appendChild(img);
-      }
+      renderSiteLogo(settings);
       const faviconHref = settings.favicon || settings.logo || '/favicon.ico';
       let link = document.querySelector('link[rel="icon"]');
       if(!link){
