@@ -499,18 +499,41 @@ $('#sectionToggles').addEventListener('click', (e) => {
   btn.classList.toggle('primary', !active);
   btn.classList.toggle('ghost', active);
 });
-$('#uploadLogoBtn').addEventListener('click', async () => {
-  const file = $('#logoInput').files?.[0];
-  if (!file) return toast('Select a logo first');
+async function handleLogoUploadClick() {
+  console.log('[admin] upload logo button clicked');
+  const logoInput = document.getElementById('logoInput');
+  const uploadButton = document.getElementById('uploadLogoBtn');
+  if (!logoInput || !uploadButton) {
+    console.log('[admin] upload logo controls missing', { logoInputFound: Boolean(logoInput), uploadButtonFound: Boolean(uploadButton) });
+    return toast('Logo upload controls are unavailable');
+  }
+  const file = logoInput.files?.[0];
+  if (!file) {
+    console.log('[admin] upload logo aborted: no file selected');
+    return toast('Select a logo first');
+  }
   try {
     const fd = new FormData();
     fd.append('logo', file, file.name);
+    console.log('[admin] upload logo request starting', { name: file.name, size: file.size, type: file.type });
     const response = await api('/api/upload/logo', { method:'POST', body: fd });
+    console.log('[admin] upload logo response received', response);
     if (response?.settings) state.data.settings = response.settings;
+    if (response?.logo) state.data.settings.logo = response.logo;
     applyBranding(state.data.settings);
     await refreshAdmin();
     toast('Logo uploaded');
-  } catch (err) { toast(err.message); }
+  } catch (err) {
+    console.log('[admin] upload logo failed', err);
+    toast(err.message);
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('#uploadLogoBtn');
+  if (!btn) return;
+  e.preventDefault();
+  handleLogoUploadClick();
 });
 $('#categoryForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -873,6 +896,10 @@ $('#adminAiForm')?.addEventListener('submit', async (e) => {
     output.textContent = err.message;
   }
 });
+const logoInputEl = document.getElementById('logoInput');
+const uploadLogoBtnEl = document.getElementById('uploadLogoBtn');
+console.log('[admin] logo upload control IDs check', { logoInputFound: Boolean(logoInputEl), uploadLogoBtnFound: Boolean(uploadLogoBtnEl) });
+
 $('#backupBtn').addEventListener('click', () => window.open('/api/admin/backup.json', '_blank', 'noopener'));
 checkSession().catch(() => {
   toast('Server not running');
