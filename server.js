@@ -28,9 +28,10 @@ const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 const SESSION_SECRET = process.env.SESSION_SECRET || (!IS_PROD ? crypto.randomBytes(32).toString('hex') : '');
 const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/namo_bharat_news24';
 const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+const REDIS_REQUIRED = String(process.env.REDIS_REQUIRED || (IS_PROD ? 'true' : 'false')).toLowerCase() === 'true';
 const DATA_DIR = path.join(__dirname, 'data');
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const UPLOAD_DIR = path.join(PUBLIC_DIR, 'uploads');
+const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || path.join(PUBLIC_DIR, 'uploads'));
 const MAILBOX_LOG = path.join(DATA_DIR, 'dev-mailbox.log');
 const ONE_MB = 1024 * 1024;
 const MAX_IMAGE_SIZE = 3 * ONE_MB;
@@ -92,8 +93,10 @@ const pool = new Pool({
 });
 
 const redisClient = createClient({ url: REDIS_URL });
+let redisAvailable = false;
+const localPreAuthStore = new Map();
 redisClient.on('error', (error) => {
-  console.error('Redis error:', error?.message || error);
+  if (REDIS_REQUIRED || IS_PROD) console.error('Redis error:', error?.message || error);
 });
 
 class RedisSessionStore extends session.Store {
@@ -134,7 +137,9 @@ class RedisSessionStore extends session.Store {
   }
 }
 
-const sessionStore = new RedisSessionStore({ client: redisClient, prefix: 'sess:' });
+const sessionStore = REDIS_REQUIRED
+  ? new RedisSessionStore({ client: redisClient, prefix: 'sess:' })
+  : new session.MemoryStore();
 
 const cspDirectives = {
   defaultSrc: ["'self'"],
@@ -289,6 +294,7 @@ const defaultSettings = {
   siteName: 'Namo Bharat News 24',
   tagline: 'तथ्य स्पष्ट, विचार निष्पक्ष',
   logo: '',
+  favicon: '',
   primaryColor: '#c4171e',
   backgroundColor: '#f7f4ef',
   breakingText: 'बड़ी खबर: बिहार और झारखंड की राजनीति, रोजगार, शिक्षा और स्थानीय खबरों पर Namo Bharat News 24 की लगातार नज़र।',
@@ -1016,15 +1022,27 @@ function issueSessionUser(req, user) {
 }
 async function createPendingPreAuth(userId) {
   const token = crypto.randomBytes(24).toString('hex');
-  await redisClient.set(`preauth:${token}`, JSON.stringify({ userId }), { EX: PREAUTH_TTL_SEC });
+  const payload = JSON.stringify({ userId });
+  if (redisAvailable) {
+    await redisClient.set(`preauth:${token}`, payload, { EX: PREAUTH_TTL_SEC });
+  } else {
+    localPreAuthStore.set(token, { payload, expiresAt: Date.now() + PREAUTH_TTL_SEC * 1000 });
+  }
   return token;
 }
 async function consumePendingPreAuth(token) {
   const key = `preauth:${token}`;
-  const raw = await redisClient.get(key);
-  if (!raw) return null;
-  await redisClient.del(key);
-  try { return JSON.parse(raw); } catch { return null; }
+  if (redisAvailable) {
+    const raw = await redisClient.get(key);
+    if (!raw) return null;
+    await redisClient.del(key);
+    try { return JSON.parse(raw); } catch { return null; }
+  }
+  const entry = localPreAuthStore.get(token);
+  if (!entry) return null;
+  localPreAuthStore.delete(token);
+  if (entry.expiresAt < Date.now()) return null;
+  try { return JSON.parse(entry.payload); } catch { return null; }
 }
 async function sendMail({ to, subject, text, html }) {
   const smtpHost = process.env.SMTP_HOST;
@@ -1074,14 +1092,31 @@ app.get('/readyz', async (req, res) => {
   if (!isReady) return res.status(503).json({ ok: false, checks: { app: 'starting' } });
   try {
     await pool.query('SELECT 1');
-    const pong = await redisClient.ping();
-    return res.json({ ok: pong === 'PONG', checks: { app: 'ready', postgres: 'ok', redis: pong } });
+    const checks = { app: 'ready', postgres: 'ok', redis: 'optional-offline' };
+    if (redisAvailable) {
+      const pong = await redisClient.ping();
+      checks.redis = pong;
+      return res.json({ ok: pong === 'PONG', checks });
+    }
+    return res.json({ ok: !REDIS_REQUIRED, checks });
   } catch (error) {
     return res.status(503).json({ ok: false, checks: { app: 'degraded' }, message: error?.message || 'dependency check failed' });
   }
 });
 app.get('/', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'index.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
+app.get('/favicon.ico', async (_req, res) => {
+  try {
+    const settings = await getSettings();
+    const iconPath = sanitizeImageUrl(settings.favicon || settings.logo, '');
+    if (!iconPath || !iconPath.startsWith('/uploads/')) return res.status(204).end();
+    const absolutePath = path.join(UPLOAD_DIR, path.basename(iconPath));
+    if (!fs.existsSync(absolutePath)) return res.status(404).end();
+    return res.sendFile(absolutePath);
+  } catch (_error) {
+    return res.status(404).end();
+  }
+});
 
 app.get('/api/site', async (req, res) => {
   try {
@@ -1447,8 +1482,9 @@ app.post('/api/upload/logo', requireAuth, requirePermission('content.manage'), r
     if (!req.file) return res.status(400).json({ message: 'Logo file is required' });
     const logo = `/uploads/${req.file.filename}`;
     await setSetting('logo', logo);
+    await setSetting('favicon', logo);
     await addAuditLog(req, 'settings.logo_uploaded', 'settings', 'logo', logo);
-    res.json({ ok: true, logo });
+    res.json({ ok: true, logo, url: logo, settings: await getSettings() });
   } catch (_error) {
     res.status(500).json({ message: 'Logo upload failed' });
   }
@@ -1874,7 +1910,19 @@ process.on('uncaughtException', (error) => {
 });
 
 async function start() {
-  await redisClient.connect();
+  if (REDIS_REQUIRED) {
+    await redisClient.connect();
+    redisAvailable = true;
+  } else {
+    try {
+      await redisClient.connect();
+      redisAvailable = true;
+      console.log('Redis connected.');
+    } catch (error) {
+      redisAvailable = false;
+      console.warn(`Redis unavailable, using in-memory sessions/preauth in ${NODE_ENV}: ${error.message}`);
+    }
+  }
   await migrate();
   const server = app.listen(PORT, '0.0.0.0', () => {
     isReady = true;
@@ -1886,7 +1934,9 @@ async function start() {
     isReady = false;
     server.close(() => undefined);
     try { await pool.end(); } catch {}
-    try { await redisClient.quit(); } catch {}
+    if (redisAvailable) {
+      try { await redisClient.quit(); } catch {}
+    }
     process.exit(0);
   };
   process.on('SIGINT', () => shutdown('SIGINT'));
