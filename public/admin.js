@@ -51,6 +51,22 @@ function fmtMoney(value) {
   return new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:2 }).format(Number(value || 0));
 }
 
+
+function sanitizeImageCandidate(value) {
+  const clean = String(value || '').trim();
+  if (!clean) return '';
+  if (/^\/uploads\/[a-zA-Z0-9._-]+$/.test(clean)) return clean;
+  if (/^https:\/\/[^\s]+$/i.test(clean)) return clean;
+  return '';
+}
+function firstValidLogo(candidates = [], fallback = '') {
+  for (const candidate of candidates) {
+    const safe = sanitizeImageCandidate(candidate);
+    if (safe) return safe;
+  }
+  return fallback;
+}
+
 function openModal(id) {
   const modal = document.getElementById(id);
   if (!modal) return;
@@ -151,17 +167,18 @@ function rebuildSelect(selectEl, options, selectedValue = '') {
 
 function applyBranding(settings = {}) {
   const adminLogo = $('#adminBrandLogo');
-  if (adminLogo && settings.logo) {
+  const logoUrl = firstValidLogo([settings.logo, settings.logoUrl, settings?.branding?.logo], '');
+  if (adminLogo && logoUrl) {
     adminLogo.textContent = '';
     const img = document.createElement('img');
     img.alt = 'logo';
-    img.src = settings.logo;
+    img.src = logoUrl;
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'cover';
     adminLogo.appendChild(img);
   }
-  const faviconHref = settings.favicon || settings.logo || '/favicon.ico';
+  const faviconHref = firstValidLogo([settings.favicon, logoUrl, settings.logoUrl, settings?.branding?.logo], '/favicon.ico');
   let link = document.querySelector('link[rel="icon"]');
   if (!link) {
     link = document.createElement('link');

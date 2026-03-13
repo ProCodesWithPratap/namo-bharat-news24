@@ -393,6 +393,13 @@ function sanitizeImageUrl(value, fallback = '') {
   if (/^https:\/\/[^\s]+$/i.test(clean)) return clean;
   return fallback;
 }
+function firstValidImage(candidates = [], fallback = '') {
+  for (const candidate of candidates) {
+    const safe = sanitizeImageUrl(candidate, '');
+    if (safe) return safe;
+  }
+  return fallback;
+}
 function toMoneyNumber(value, fallback = 0) {
   const num = Number(value);
   return Number.isFinite(num) ? Math.max(0, Number(num.toFixed(2))) : fallback;
@@ -754,6 +761,17 @@ async function getSettings() {
   const rows = await many(`SELECT key, value FROM settings`);
   const settings = { ...defaultSettings };
   for (const row of rows) settings[row.key] = row.value;
+  settings.logo = firstValidImage([
+    settings.logo,
+    settings.logoUrl,
+    settings?.branding?.logo
+  ], defaultSettings.logo);
+  settings.favicon = firstValidImage([
+    settings.favicon,
+    settings.logo,
+    settings.logoUrl,
+    settings?.branding?.logo
+  ], defaultSettings.favicon);
   settings.visibleSections = { ...defaultSettings.visibleSections, ...(settings.visibleSections || {}) };
   return settings;
 }
@@ -1108,7 +1126,7 @@ app.get('/admin', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')
 app.get('/favicon.ico', async (_req, res) => {
   try {
     const settings = await getSettings();
-    const iconPath = sanitizeImageUrl(settings.favicon || settings.logo, '');
+    const iconPath = firstValidImage([settings.favicon, settings.logo], '');
     if (!iconPath || !iconPath.startsWith('/uploads/')) return res.status(204).end();
     const absolutePath = path.join(UPLOAD_DIR, path.basename(iconPath));
     if (!fs.existsSync(absolutePath)) return res.status(404).end();
@@ -1447,6 +1465,11 @@ app.put('/api/settings', requireAuth, requirePermission('content.manage'), requi
   try {
     const current = await getSettings();
     const incoming = req.body || {};
+    const incomingLogo = firstValidImage([
+      incoming.logo,
+      incoming.logoUrl,
+      incoming?.branding?.logo
+    ], '');
     const visibleSections = typeof incoming.visibleSections === 'object' && incoming.visibleSections ? incoming.visibleSections : {};
     const nextSettings = {
       ...current,
@@ -1458,6 +1481,11 @@ app.put('/api/settings', requireAuth, requirePermission('content.manage'), requi
       contactEmail: sanitizeEmail(incoming.contactEmail, current.contactEmail),
       footerText: sanitizeParagraph(incoming.footerText, current.footerText, 220),
       heroArticleId: sanitizeText(incoming.heroArticleId, current.heroArticleId, 64),
+      logo: incomingLogo || firstValidImage([
+        current.logo,
+        current.logoUrl,
+        current?.branding?.logo
+      ], defaultSettings.logo),
       selectedCity: sanitizeText(incoming.selectedCity, current.selectedCity, 40),
       editorName: sanitizeText(incoming.editorName, current.editorName, 80),
       officeAddress: sanitizeText(incoming.officeAddress, current.officeAddress, 120),
