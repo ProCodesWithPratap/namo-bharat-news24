@@ -17,6 +17,12 @@
     function resolveLogoUrl(settings = {}){
       return settings.logo || settings.logoUrl || settings?.branding?.logo || settings.favicon || '';
     }
+    function withCacheBust(url){
+      const value = String(url || '').trim();
+      if(!value) return '';
+      if(!value.startsWith('/uploads/')) return value;
+      return `${value}${value.includes('?') ? '&' : '?'}v=${Date.now()}`;
+    }
     function renderSiteLogo(settings){
       const wrap = byId('siteLogo');
       if(!wrap) return;
@@ -28,7 +34,7 @@
       }
       const img = document.createElement('img');
       img.alt = 'logo';
-      img.src = logoUrl;
+      img.src = withCacheBust(logoUrl);
       img.style.width = '100%';
       img.style.height = '100%';
       img.style.objectFit = 'cover';
@@ -49,7 +55,7 @@
       byId('officeAddress').textContent = settings.officeAddress || '';
       byId('cityBtn').textContent = settings.selectedCity || 'पटना';
       renderSiteLogo(settings);
-      const faviconHref = settings.favicon || resolveLogoUrl(settings) || '/favicon.ico';
+      const faviconHref = withCacheBust(settings.favicon || resolveLogoUrl(settings) || '/favicon.ico');
       let link = document.querySelector('link[rel="icon"]');
       if(!link){
         link = document.createElement('link');
