@@ -149,19 +149,24 @@ function rebuildSelect(selectEl, options, selectedValue = '') {
   selectEl.value = selectedValue;
 }
 
+function resolveLogoUrl(settings = {}) {
+  return settings.logo || settings.logoUrl || settings?.branding?.logo || settings.favicon || '';
+}
+
 function applyBranding(settings = {}) {
   const adminLogo = $('#adminBrandLogo');
-  if (adminLogo && settings.logo) {
+  const logoUrl = resolveLogoUrl(settings);
+  if (adminLogo && logoUrl) {
     adminLogo.textContent = '';
     const img = document.createElement('img');
     img.alt = 'logo';
-    img.src = settings.logo;
+    img.src = logoUrl;
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'cover';
     adminLogo.appendChild(img);
   }
-  const faviconHref = settings.favicon || settings.logo || '/favicon.ico';
+  const faviconHref = settings.favicon || logoUrl || '/favicon.ico';
   let link = document.querySelector('link[rel="icon"]');
   if (!link) {
     link = document.createElement('link');
@@ -547,7 +552,7 @@ function handleLogoUploadClick(e) {
         state.csrfToken = data.csrfToken;
       }
 
-      const settingsPayload = data.settings ? data.settings : { logo: data.logo || data.url };
+      const settingsPayload = data.settings ? data.settings : { logo: data.logo || data.logoUrl || data.url || data?.branding?.logo || '' };
       console.log('[admin] updating local/admin state with:', settingsPayload);
 
       if (settingsPayload) {

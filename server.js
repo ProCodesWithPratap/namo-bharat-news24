@@ -754,6 +754,10 @@ async function getSettings() {
   const rows = await many(`SELECT key, value FROM settings`);
   const settings = { ...defaultSettings };
   for (const row of rows) settings[row.key] = row.value;
+  const normalizedLogo = sanitizeImageUrl(settings.logo || settings.logoUrl || settings?.branding?.logo || '', '');
+  settings.logo = normalizedLogo;
+  settings.logoUrl = normalizedLogo;
+  settings.branding = { ...(settings.branding || {}), logo: normalizedLogo };
   settings.visibleSections = { ...defaultSettings.visibleSections, ...(settings.visibleSections || {}) };
   return settings;
 }
@@ -1461,12 +1465,15 @@ app.put('/api/settings', requireAuth, requirePermission('content.manage'), requi
       selectedCity: sanitizeText(incoming.selectedCity, current.selectedCity, 40),
       editorName: sanitizeText(incoming.editorName, current.editorName, 80),
       officeAddress: sanitizeText(incoming.officeAddress, current.officeAddress, 120),
+      logo: sanitizeImageUrl(incoming.logo || incoming.logoUrl || incoming?.branding?.logo, current.logo || ''),
       visibleSections: { ...current.visibleSections }
     };
     for (const [key, value] of Object.entries(visibleSections)) {
       const safeKey = sanitizeText(key, '', 40);
       if (safeKey) nextSettings.visibleSections[safeKey] = Boolean(value);
     }
+    nextSettings.logoUrl = nextSettings.logo || '';
+    nextSettings.branding = { ...(current.branding || {}), logo: nextSettings.logo || '' };
     for (const [key, value] of Object.entries(nextSettings)) {
       await setSetting(key, value);
     }
@@ -1482,9 +1489,12 @@ app.post('/api/upload/logo', requireAuth, requirePermission('content.manage'), r
     if (!req.file) return res.status(400).json({ message: 'Logo file is required' });
     const logo = `/uploads/${req.file.filename}`;
     await setSetting('logo', logo);
+    await setSetting('logoUrl', logo);
+    await setSetting('branding', { logo });
     await setSetting('favicon', logo);
+    const settings = await getSettings();
     await addAuditLog(req, 'settings.logo_uploaded', 'settings', 'logo', logo);
-    res.json({ ok: true, logo, url: logo, settings: await getSettings() });
+    res.json({ ok: true, logo, logoUrl: logo, url: logo, branding: { logo }, settings, persistedVia: 'upload' });
   } catch (_error) {
     res.status(500).json({ message: 'Logo upload failed' });
   }
