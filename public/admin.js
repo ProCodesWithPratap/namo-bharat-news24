@@ -595,15 +595,6 @@ function bindLogoUploadControls() {
     btn.dataset.bound = '1';
     btn.addEventListener('click', handleLogoUploadClick);
   }
-
-  if (!document.body.dataset.logoUploadDelegatedBound) {
-    document.body.dataset.logoUploadDelegatedBound = '1';
-    document.addEventListener('click', (e) => {
-      const btn = e.target.closest('#uploadLogoBtn');
-      if (!btn) return;
-      handleLogoUploadClick(e);
-    });
-  }
 }
 $('#categoryForm').addEventListener('submit', async (e) => {
   e.preventDefault();
