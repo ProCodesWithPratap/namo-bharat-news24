@@ -91,6 +91,50 @@
       byId('heroTitle').textContent = article.title;
       byId('heroSummary').textContent = article.summary || '';
     }
+    function createAdMedia({ image, link, alt }){
+      const img = document.createElement('img');
+      img.src = image;
+      img.alt = alt || 'Advertisement';
+      img.loading = 'lazy';
+      if (!link) return img;
+      const anchor = document.createElement('a');
+      anchor.href = link;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer sponsored';
+      anchor.appendChild(img);
+      return anchor;
+    }
+    function renderAds(){
+      const s = state.settings || {};
+      const bannerMount = byId('homepageBannerAd');
+      const sidebarMount = byId('homepageSidebarAd');
+
+      if (bannerMount) {
+        const canShowBanner = !!(s.homepageBannerEnabled && s.homepageBannerImage);
+        bannerMount.textContent = '';
+        bannerMount.classList.toggle('hidden', !canShowBanner);
+        if (canShowBanner) {
+          const label = document.createElement('div');
+          label.className = 'ad-label';
+          label.textContent = 'Advertisement';
+          bannerMount.append(label, createAdMedia({ image: s.homepageBannerImage, link: s.homepageBannerLink, alt: s.homepageBannerAlt }));
+        }
+      }
+
+      if (sidebarMount) {
+        const desktop = window.matchMedia('(min-width: 981px)').matches;
+        const canShowSidebar = !!(desktop && s.homepageSidebarAdEnabled && s.homepageSidebarAdImage);
+        sidebarMount.textContent = '';
+        sidebarMount.classList.toggle('hidden', !canShowSidebar);
+        if (canShowSidebar) {
+          const label = document.createElement('div');
+          label.className = 'ad-label';
+          label.textContent = 'Advertisement';
+          sidebarMount.append(label, createAdMedia({ image: s.homepageSidebarAdImage, link: s.homepageSidebarAdLink, alt: s.homepageSidebarAdAlt }));
+        }
+      }
+    }
+
     function renderTrending(){
       const items = filteredArticles().filter((item) => item.trending || item.featured).slice(0, 6);
       const mount = byId('trendingList');
@@ -216,6 +260,7 @@
       state.articles = (data.articles || []).sort((a,b)=>new Date(b.publishedAt)-new Date(a.publishedAt));
       applyTheme(state.settings);
       renderNav();
+      renderAds();
       renderHero();
       renderTrending();
       renderSections();
@@ -239,6 +284,7 @@
       byId('assistantMessage').value = btn.dataset.prompt;
       await askAssistant(btn.dataset.prompt);
     });
+    window.addEventListener('resize', renderAds);
     loadSite().catch(() => {
       const mount = byId('sectionsMount');
       mount.textContent = '';

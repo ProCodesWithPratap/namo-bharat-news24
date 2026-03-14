@@ -307,6 +307,14 @@ const defaultSettings = {
   selectedCity: 'पटना',
   editorName: 'प्रधान संपादक, Namo Bharat News 24',
   officeAddress: 'पटना, बिहार',
+  homepageBannerImage: '',
+  homepageBannerLink: '',
+  homepageBannerAlt: 'Homepage advertisement',
+  homepageBannerEnabled: false,
+  homepageSidebarAdImage: '',
+  homepageSidebarAdLink: '',
+  homepageSidebarAdAlt: 'Sidebar advertisement',
+  homepageSidebarAdEnabled: false,
   visibleSections: {
     'राष्ट्रीय': true,
     'बिहार': true,
@@ -394,6 +402,13 @@ function sanitizeImageUrl(value, fallback = '') {
   if (!clean) return fallback;
   if (/^\/uploads\/[a-zA-Z0-9._-]+$/.test(clean)) return clean;
   if (/^https:\/\/[^\s]+$/i.test(clean)) return clean;
+  return fallback;
+}
+function sanitizeLinkUrl(value, fallback = '') {
+  const clean = String(value || '').trim();
+  if (!clean) return fallback;
+  if (/^https?:\/\/[^\s]+$/i.test(clean)) return clean;
+  if (/^\/[-a-zA-Z0-9._~%!$&'()*+,;=:@/]*$/.test(clean)) return clean;
   return fallback;
 }
 function firstValidImage(candidates = [], fallback = '') {
@@ -1499,6 +1514,14 @@ app.put('/api/settings', requireAuth, requirePermission('content.manage'), requi
       selectedCity: sanitizeText(incoming.selectedCity, current.selectedCity, 40),
       editorName: sanitizeText(incoming.editorName, current.editorName, 80),
       officeAddress: sanitizeText(incoming.officeAddress, current.officeAddress, 120),
+      homepageBannerImage: sanitizeImageUrl(incoming.homepageBannerImage, current.homepageBannerImage || ''),
+      homepageBannerLink: sanitizeLinkUrl(incoming.homepageBannerLink, current.homepageBannerLink || ''),
+      homepageBannerAlt: sanitizeText(incoming.homepageBannerAlt, current.homepageBannerAlt || defaultSettings.homepageBannerAlt, 120),
+      homepageBannerEnabled: sanitizeBoolean(incoming.homepageBannerEnabled, current.homepageBannerEnabled || false),
+      homepageSidebarAdImage: sanitizeImageUrl(incoming.homepageSidebarAdImage, current.homepageSidebarAdImage || ''),
+      homepageSidebarAdLink: sanitizeLinkUrl(incoming.homepageSidebarAdLink, current.homepageSidebarAdLink || ''),
+      homepageSidebarAdAlt: sanitizeText(incoming.homepageSidebarAdAlt, current.homepageSidebarAdAlt || defaultSettings.homepageSidebarAdAlt, 120),
+      homepageSidebarAdEnabled: sanitizeBoolean(incoming.homepageSidebarAdEnabled, current.homepageSidebarAdEnabled || false),
       visibleSections: { ...current.visibleSections }
     };
     for (const [key, value] of Object.entries(visibleSections)) {

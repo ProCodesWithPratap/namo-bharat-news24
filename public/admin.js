@@ -201,6 +201,14 @@ function fillSiteForm() {
   form.officeAddress.value = s.officeAddress || '';
   form.breakingText.value = s.breakingText || '';
   form.footerText.value = s.footerText || '';
+  form.homepageBannerImage.value = s.homepageBannerImage || '';
+  form.homepageBannerLink.value = s.homepageBannerLink || '';
+  form.homepageBannerAlt.value = s.homepageBannerAlt || 'Homepage advertisement';
+  form.homepageBannerEnabled.checked = !!s.homepageBannerEnabled;
+  form.homepageSidebarAdImage.value = s.homepageSidebarAdImage || '';
+  form.homepageSidebarAdLink.value = s.homepageSidebarAdLink || '';
+  form.homepageSidebarAdAlt.value = s.homepageSidebarAdAlt || 'Sidebar advertisement';
+  form.homepageSidebarAdEnabled.checked = !!s.homepageSidebarAdEnabled;
   rebuildSelect($('#heroArticleId'), state.data.articles.map((article) => ({ value: article.id, label: article.title })), s.heroArticleId || '');
   const sectionToggles = $('#sectionToggles');
   clear(sectionToggles);
@@ -504,6 +512,8 @@ $('#siteSettingsForm').addEventListener('submit', async (e) => {
     $$('.toggle-section').forEach((btn) => { visibleSections[btn.dataset.name] = btn.dataset.active !== 'false'; });
     const payload = formToObject(form);
     payload.visibleSections = visibleSections;
+    payload.homepageBannerEnabled = form.homepageBannerEnabled.checked;
+    payload.homepageSidebarAdEnabled = form.homepageSidebarAdEnabled.checked;
     await api('/api/settings', { method:'PUT', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
     await refreshAdmin();
     toast('Site settings saved');
