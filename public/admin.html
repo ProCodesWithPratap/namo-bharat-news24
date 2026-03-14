@@ -110,19 +110,29 @@
           <label style="margin-top:12px">Breaking text <textarea name="breakingText"></textarea></label>
           <label style="margin-top:12px">Footer text <textarea name="footerText"></textarea></label>
 
-          <div class="ad-settings-block" style="margin-top:12px">
+          <div class="ad-settings-block">
             <h3>Homepage Advertisement</h3>
-            <div class="form-grid">
-              <label>Banner image URL <input name="homepageBannerImage" placeholder="/uploads/banner.webp or https://..."></label>
-              <label>Banner image upload <input id="homepageBannerImageInput" type="file" accept="image/*"></label>
-              <label>Banner link <input name="homepageBannerLink" placeholder="https://example.com"></label>
-              <label>Banner alt text <input name="homepageBannerAlt" placeholder="Advertisement banner"></label>
-              <label><input type="checkbox" name="homepageBannerEnabled"> Banner enabled</label>
-              <label>Sidebar ad image URL <input name="homepageSidebarAdImage" placeholder="/uploads/sidebar.webp or https://..."></label>
-              <label>Sidebar ad image upload <input id="homepageSidebarAdImageInput" type="file" accept="image/*"></label>
-              <label>Sidebar ad link <input name="homepageSidebarAdLink" placeholder="https://example.com"></label>
-              <label>Sidebar ad alt text <input name="homepageSidebarAdAlt" placeholder="Sidebar advertisement"></label>
-              <label><input type="checkbox" name="homepageSidebarAdEnabled"> Sidebar ad enabled</label>
+            <div class="ad-settings-grid">
+              <fieldset class="ad-settings-group">
+                <legend>Banner ad</legend>
+                <div class="form-grid">
+                  <label>Banner image URL <input name="homepageBannerImage" placeholder="/uploads/banner.webp or https://..."></label>
+                  <label>Banner image upload <input id="homepageBannerImageInput" type="file" accept="image/*"></label>
+                  <label>Banner link <input name="homepageBannerLink" placeholder="https://example.com"></label>
+                  <label>Banner alt text <input name="homepageBannerAlt" placeholder="Advertisement banner"></label>
+                </div>
+                <label class="inline-check"><input type="checkbox" name="homepageBannerEnabled"> Banner enabled</label>
+              </fieldset>
+              <fieldset class="ad-settings-group">
+                <legend>Sidebar ad</legend>
+                <div class="form-grid">
+                  <label>Sidebar ad image URL <input name="homepageSidebarAdImage" placeholder="/uploads/sidebar.webp or https://..."></label>
+                  <label>Sidebar ad image upload <input id="homepageSidebarAdImageInput" type="file" accept="image/*"></label>
+                  <label>Sidebar ad link <input name="homepageSidebarAdLink" placeholder="https://example.com"></label>
+                  <label>Sidebar ad alt text <input name="homepageSidebarAdAlt" placeholder="Sidebar advertisement"></label>
+                </div>
+                <label class="inline-check"><input type="checkbox" name="homepageSidebarAdEnabled"> Sidebar ad enabled</label>
+              </fieldset>
             </div>
           </div>
 
