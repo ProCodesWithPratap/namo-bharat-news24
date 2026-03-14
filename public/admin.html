@@ -114,10 +114,12 @@
             <h3>Homepage Advertisement</h3>
             <div class="form-grid">
               <label>Banner image URL <input name="homepageBannerImage" placeholder="/uploads/banner.webp or https://..."></label>
+              <label>Banner image upload <input id="homepageBannerImageInput" type="file" accept="image/*"></label>
               <label>Banner link <input name="homepageBannerLink" placeholder="https://example.com"></label>
               <label>Banner alt text <input name="homepageBannerAlt" placeholder="Advertisement banner"></label>
               <label><input type="checkbox" name="homepageBannerEnabled"> Banner enabled</label>
               <label>Sidebar ad image URL <input name="homepageSidebarAdImage" placeholder="/uploads/sidebar.webp or https://..."></label>
+              <label>Sidebar ad image upload <input id="homepageSidebarAdImageInput" type="file" accept="image/*"></label>
               <label>Sidebar ad link <input name="homepageSidebarAdLink" placeholder="https://example.com"></label>
               <label>Sidebar ad alt text <input name="homepageSidebarAdAlt" placeholder="Sidebar advertisement"></label>
               <label><input type="checkbox" name="homepageSidebarAdEnabled"> Sidebar ad enabled</label>
@@ -131,6 +133,8 @@
           <div class="toolbar">
             <button class="btn primary" type="submit">Save settings</button>
             <button class="btn" type="button" id="uploadLogoBtn">Upload logo</button>
+            <button class="btn" type="button" id="uploadHomepageBannerBtn">Upload homepage banner image</button>
+            <button class="btn" type="button" id="uploadHomepageSidebarBtn">Upload homepage sidebar image</button>
           </div>
         </form>
       </section>

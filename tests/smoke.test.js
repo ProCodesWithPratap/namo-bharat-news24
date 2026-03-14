@@ -100,14 +100,19 @@ test('login supports username or email identity', () => {
 });
 
 
-test('homepage advertisement settings are wired in admin, API, and public UI', () => {
+test('homepage advertisement settings are wired in admin, upload API, and public UI', () => {
   assert.match(adminHtml, /name="homepageBannerImage"/);
+  assert.match(adminHtml, /id="homepageBannerImageInput"/);
+  assert.match(adminHtml, /id="uploadHomepageBannerBtn"/);
   assert.match(adminHtml, /name="homepageSidebarAdImage"/);
-  assert.match(adminJs, /homepageBannerEnabled/);
-  assert.match(adminJs, /homepageSidebarAdEnabled/);
+  assert.match(adminHtml, /id="homepageSidebarAdImageInput"/);
+  assert.match(adminHtml, /id="uploadHomepageSidebarBtn"/);
+  assert.match(adminJs, /uploadSettingsImage/);
+  assert.match(adminJs, /\/api\/upload\/homepage-banner/);
+  assert.match(adminJs, /\/api\/upload\/homepage-sidebar/);
   assert.match(indexHtml, /id="homepageBannerAd"/);
   assert.match(indexHtml, /id="homepageSidebarAd"/);
-  assert.match(server, /homepageBannerImage/);
-  assert.match(server, /homepageSidebarAdImage/);
+  assert.match(server, /app\.post\('\/api\/upload\/homepage-banner'/);
+  assert.match(server, /app\.post\('\/api\/upload\/homepage-sidebar'/);
   assert.match(styles, /\.ad-slot/);
 });
