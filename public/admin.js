@@ -224,13 +224,15 @@ function fillCategories() {
   if (!state.data.categories.length) {
     list.appendChild(text('div', 'No categories yet.', 'empty'));
   } else {
+    const byId = new Map(state.data.categories.map((cat) => [cat.id, cat]));
     state.data.categories.forEach((cat) => {
       const item = document.createElement('div');
       item.className = 'item';
       const row = document.createElement('div');
       row.className = 'item-row';
       const meta = document.createElement('div');
-      meta.append(text('strong', cat.name), text('div', cat.enabled ? 'Enabled' : 'Disabled', 'muted'));
+      const parent = cat.parentId ? byId.get(cat.parentId) : null;
+      meta.append(text('strong', cat.name), text('div', `${cat.enabled ? 'Enabled' : 'Disabled'}${parent ? ` • Subcategory of ${parent.name}` : ''}`, 'muted'));
       const tools = document.createElement('div');
       tools.className = 'toolbar';
       tools.append(
@@ -243,7 +245,14 @@ function fillCategories() {
       list.appendChild(item);
     });
   }
-  rebuildSelect($('#articleCategory'), state.data.categories.map((cat) => ({ value: cat.name, label: cat.name })), $('#articleForm').category.value || '');
+  const topCats = state.data.categories.filter((cat) => !cat.parentId);
+  const subCats = state.data.categories.filter((cat) => !!cat.parentId);
+  rebuildSelect($('#categoryParent'), [{ value:'', label:'Top-level category' }, ...topCats.map((cat) => ({ value: cat.id, label: cat.name }))], $('#categoryForm')?.parentId?.value || '');
+  rebuildSelect($('#articleCategory'), topCats.map((cat) => ({ value: cat.name, label: cat.name })), $('#articleForm').category.value || '');
+  rebuildSelect($('#articleSubcategory'), [{ value:'', label:'None' }, ...subCats.map((cat) => {
+    const parent = topCats.find((p) => p.id === cat.parentId);
+    return { value: cat.name, label: `${parent ? `${parent.name} → ` : ''}${cat.name}` };
+  })], $('#articleForm').subcategory?.value || '');
 }
 function fillArticles() {
   const list = $('#articleList');
@@ -261,7 +270,7 @@ function fillArticles() {
     const meta = document.createElement('div');
     meta.append(
       text('strong', article.title),
-      text('div', `${article.category || '—'} • ${article.location || '—'} • ${fmtDateTime(article.publishedAt)}`, 'muted')
+      text('div', `${article.category || '—'}${article.subcategory ? ` → ${article.subcategory}` : ''} • ${article.location || '—'} • ${fmtDateTime(article.publishedAt)}`, 'muted')
     );
     const actions = document.createElement('div');
     actions.className = 'toolbar';
@@ -627,7 +636,7 @@ $('#categoryList').addEventListener('click', async (e) => {
       return;
     }
     if (btn.dataset.action === 'toggle-category') {
-      await api(`/api/categories/${encodeURIComponent(cat.id)}`, { method:'PUT', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name: cat.name, enabled: !cat.enabled }) });
+      await api(`/api/categories/${encodeURIComponent(cat.id)}`, { method:'PUT', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name: cat.name, parentId: cat.parentId || '', enabled: !cat.enabled }) });
     }
     if (btn.dataset.action === 'delete-category') {
       if (!window.confirm(`Delete ${cat.name}?`)) return;
@@ -652,7 +661,15 @@ $('#articleForm').addEventListener('submit', async (e) => {
     toast(id ? 'Article updated' : 'Article created');
   } catch (err) { toast(err.message); }
 });
-$('#resetArticleBtn').addEventListener('click', () => { $('#articleForm').reset(); $('#articleForm').articleId.value = ''; });
+$('#resetArticleBtn').addEventListener('click', () => { $('#articleForm').reset(); $('#articleForm').articleId.value = ''; $('#articleForm').subcategory.value = ''; });
+
+$('#articleCategory')?.addEventListener('change', (e) => {
+  const parentName = e.target.value;
+  const parent = state.data.categories.find((cat) => cat.name === parentName && !cat.parentId);
+  const scoped = state.data.categories.filter((cat) => cat.parentId && (!parent || cat.parentId === parent.id));
+  rebuildSelect($('#articleSubcategory'), [{ value:'', label:'None' }, ...scoped.map((cat) => ({ value: cat.name, label: cat.name }))], '');
+});
+
 $('#articleList').addEventListener('click', async (e) => {
   const btn = e.target.closest('button[data-action]');
   if (!btn) return;
@@ -663,6 +680,7 @@ $('#articleList').addEventListener('click', async (e) => {
     form.articleId.value = article.id;
     form.title.value = article.title;
     form.category.value = article.category;
+    form.subcategory.value = article.subcategory || '';
     form.location.value = article.location || '';
     form.author.value = article.author || '';
     form.publishedAt.value = new Date(article.publishedAt).toISOString().slice(0, 16);
@@ -913,7 +931,8 @@ $('#categoryRenameForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.currentTarget;
   try {
-    await api(`/api/categories/${encodeURIComponent(form.categoryId.value)}`, { method:'PUT', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name: form.name.value }) });
+    const existing = state.data.categories.find((c) => c.id === form.categoryId.value);
+    await api(`/api/categories/${encodeURIComponent(form.categoryId.value)}`, { method:'PUT', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name: form.name.value, parentId: existing?.parentId || '', enabled: existing?.enabled ?? true }) });
     closeModal('categoryRenameModal');
     form.reset();
     await refreshAdmin();

@@ -28,8 +28,6 @@
         <div class="actions search-actions">
           <button class="btn ghost" id="cityBtn">पटना</button>
           <input id="publicSearch" class="public-search" placeholder="खबर खोजें: शीर्षक, जिला, श्रेणी">
-          <button class="btn ghost" id="assistantToggleBtn" type="button">AI सहायक</button>
-          <a class="btn primary" href="/admin">Control Center</a>
         </div>
       </div>
     </div>
@@ -90,18 +88,19 @@
     </div>
   </footer>
 
-  <aside class="assistant-drawer hidden" id="assistantDrawer">
+  <button class="assistant-fab" id="assistantToggleBtn" type="button" aria-controls="assistantDrawer" aria-expanded="false">AI</button>
+  <aside class="assistant-drawer hidden" id="assistantDrawer" aria-live="polite">
     <div class="assistant-head">
       <strong>जनता AI सहायक</strong>
       <button class="btn ghost" id="assistantCloseBtn" type="button">Close</button>
     </div>
-    <div class="assistant-body" id="assistantOutput">पूछें: आज की मुख्य खबर क्या है? किसी जिले की खबर दिखाओ। राजनीति का सार बताओ।</div>
+    <div class="assistant-prompts" id="assistantPromptChips"></div>
+    <div class="assistant-body" id="assistantOutput"></div>
     <form id="assistantForm" class="assistant-form" data-endpoint="/api/assistant/public">
       <textarea id="assistantMessage" name="message" placeholder="अपना सवाल लिखें"></textarea>
       <div class="toolbar">
         <button class="btn primary" type="submit">पूछें</button>
-        <button class="btn ghost" type="button" data-prompt="आज की मुख्य खबरों का छोटा सार बताओ">आज का सार</button>
-        <button class="btn ghost" type="button" data-prompt="राजनीति और बिहार से जुड़ी खबरें बताओ">बिहार + राजनीति</button>
+        <button class="btn ghost" type="button" id="assistantClearBtn">साफ करें</button>
       </div>
     </form>
   </aside>
