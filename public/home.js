@@ -77,10 +77,24 @@
       if(!article) return;
       const heroImage = byId('heroImage');
       heroImage.textContent = '';
-      const img = document.createElement('img');
-      img.alt = '';
-      img.src = article.image || placeholder;
-      heroImage.appendChild(img);
+      if(article.image){
+        const img = document.createElement('img');
+        img.alt = article.title || '';
+        img.src = article.image;
+        img.addEventListener('error', () => {
+          heroImage.textContent = '';
+          const fallback = document.createElement('div');
+          fallback.className = 'hero-media-fallback';
+          fallback.innerHTML = 'मुख्य खबर <small>Image unavailable</small>';
+          heroImage.appendChild(fallback);
+        }, { once:true });
+        heroImage.appendChild(img);
+      } else {
+        const fallback = document.createElement('div');
+        fallback.className = 'hero-media-fallback';
+        fallback.innerHTML = 'मुख्य खबर <small>Image not provided</small>';
+        heroImage.appendChild(fallback);
+      }
       const heroMeta = byId('heroMeta');
       heroMeta.textContent = '';
       [article.category, article.location, formatDate(article.publishedAt)].forEach((value) => {

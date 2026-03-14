@@ -94,42 +94,49 @@
 
       <section id="siteTab" class="panel admin-tab hidden">
         <h2>Site Settings</h2>
+        <p class="admin-section-intro">Control branding, homepage content, and advertisement placements from one clean layout.</p>
         <form id="siteSettingsForm">
-          <div class="form-grid">
-            <label>Site name <input name="siteName" required></label>
-            <label>Tagline <input name="tagline"></label>
-            <label>Primary color <input name="primaryColor" type="color"></label>
-            <label>Background color <input name="backgroundColor" type="color"></label>
-            <label>Selected city <input name="selectedCity"></label>
-            <label>Contact email <input name="contactEmail" type="email"></label>
-            <label>Editor name <input name="editorName"></label>
-            <label>Office address <input name="officeAddress"></label>
-            <label>Hero article <select name="heroArticleId" id="heroArticleId"></select></label>
-            <label>Logo <input id="logoInput" type="file" accept="image/*"></label>
+          <div class="settings-group">
+            <h3>Brand & Core Details</h3>
+            <div class="form-grid">
+              <label>Site name <input name="siteName" required></label>
+              <label>Tagline <input name="tagline"></label>
+              <label>Primary color <input name="primaryColor" type="color"></label>
+              <label>Background color <input name="backgroundColor" type="color"></label>
+              <label>Selected city <input name="selectedCity"></label>
+              <label>Contact email <input name="contactEmail" type="email"></label>
+              <label>Editor name <input name="editorName"></label>
+              <label>Office address <input name="officeAddress"></label>
+              <label>Hero article <select name="heroArticleId" id="heroArticleId"></select></label>
+              <label>Logo <input id="logoInput" type="file" accept="image/*"></label>
+            </div>
+            <label style="margin-top:12px">Breaking text <textarea name="breakingText"></textarea></label>
+            <label style="margin-top:12px">Footer text <textarea name="footerText"></textarea></label>
           </div>
-          <label style="margin-top:12px">Breaking text <textarea name="breakingText"></textarea></label>
-          <label style="margin-top:12px">Footer text <textarea name="footerText"></textarea></label>
 
-          <div class="ad-settings-block" style="margin-top:12px">
+          <div class="settings-group ad-settings-block">
             <h3>Homepage Advertisement</h3>
             <div class="form-grid">
               <label>Banner image URL <input name="homepageBannerImage" placeholder="/uploads/banner.webp or https://..."></label>
               <label>Banner image upload <input id="homepageBannerImageInput" type="file" accept="image/*"></label>
               <label>Banner link <input name="homepageBannerLink" placeholder="https://example.com"></label>
               <label>Banner alt text <input name="homepageBannerAlt" placeholder="Advertisement banner"></label>
-              <label><input type="checkbox" name="homepageBannerEnabled"> Banner enabled</label>
               <label>Sidebar ad image URL <input name="homepageSidebarAdImage" placeholder="/uploads/sidebar.webp or https://..."></label>
               <label>Sidebar ad image upload <input id="homepageSidebarAdImageInput" type="file" accept="image/*"></label>
               <label>Sidebar ad link <input name="homepageSidebarAdLink" placeholder="https://example.com"></label>
               <label>Sidebar ad alt text <input name="homepageSidebarAdAlt" placeholder="Sidebar advertisement"></label>
+            </div>
+            <div class="check-grid" style="margin-top:12px">
+              <label><input type="checkbox" name="homepageBannerEnabled"> Banner enabled</label>
               <label><input type="checkbox" name="homepageSidebarAdEnabled"> Sidebar ad enabled</label>
             </div>
           </div>
 
-          <div style="margin-top:12px">
-            <strong>Visible sections</strong>
+          <div class="settings-group">
+            <h3>Visible sections</h3>
             <div id="sectionToggles" class="toolbar"></div>
           </div>
+
           <div class="toolbar">
             <button class="btn primary" type="submit">Save settings</button>
             <button class="btn" type="button" id="uploadLogoBtn">Upload logo</button>
