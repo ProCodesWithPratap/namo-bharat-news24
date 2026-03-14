@@ -155,6 +155,7 @@
         <h2>Categories</h2>
         <form id="categoryForm" class="inline">
           <input name="name" placeholder="New category" required>
+          <select name="parentId" id="categoryParent"><option value="">Top-level category</option></select>
           <button class="btn primary" type="submit">Add category</button>
         </form>
         <div id="categoryList" class="list" style="margin-top:14px"></div>
@@ -167,6 +168,7 @@
           <div class="form-grid-3">
             <label>Title <input name="title" required></label>
             <label>Category <select name="category" id="articleCategory"></select></label>
+            <label>Subcategory <select name="subcategory" id="articleSubcategory"><option value="">None</option></select></label>
             <label>Location <input name="location"></label>
             <label>Author <input name="author"></label>
             <label>Published at <input name="publishedAt" type="datetime-local"></label>

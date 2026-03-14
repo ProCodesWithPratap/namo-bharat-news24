@@ -554,6 +554,7 @@ function normalizeArticle(input = {}, existing = {}) {
     id: sanitizeText(existing.id || input.id || crypto.randomUUID(), crypto.randomUUID(), 64),
     title: sanitizeText(input.title, existing.title || '', 180),
     category: sanitizeText(input.category, existing.category || 'राष्ट्रीय', 40),
+    subcategory: sanitizeText(input.subcategory, existing.subcategory || '', 40),
     location: sanitizeText(input.location, existing.location || 'पटना', 60),
     author: sanitizeText(input.author, existing.author || 'Namo Bharat News 24', 80),
     summary: sanitizeParagraph(input.summary, existing.summary || '', 260),
@@ -617,6 +618,7 @@ async function migrate() {
     CREATE TABLE IF NOT EXISTS categories (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL UNIQUE,
+      parent_id TEXT REFERENCES categories(id) ON DELETE SET NULL,
       enabled BOOLEAN NOT NULL DEFAULT TRUE
     );
     CREATE TABLE IF NOT EXISTS articles (
@@ -629,6 +631,8 @@ async function migrate() {
     );
     CREATE INDEX IF NOT EXISTS idx_articles_published_at ON articles(published_at DESC);
     CREATE INDEX IF NOT EXISTS idx_articles_category ON articles(category);
+
+    ALTER TABLE categories ADD COLUMN IF NOT EXISTS parent_id TEXT REFERENCES categories(id) ON DELETE SET NULL;
 
     CREATE TABLE IF NOT EXISTS reporters (
       id TEXT PRIMARY KEY,
@@ -794,8 +798,8 @@ async function getSettings() {
   return settings;
 }
 async function listCategories(includeDisabled = true) {
-  const rows = await many(`SELECT id, name, enabled FROM categories ORDER BY name ASC`);
-  const items = rows.map((row) => ({ id: row.id, name: row.name, enabled: row.enabled }));
+  const rows = await many(`SELECT id, name, parent_id, enabled FROM categories ORDER BY COALESCE(parent_id, ''), name ASC`);
+  const items = rows.map((row) => ({ id: row.id, name: row.name, parentId: row.parent_id || '', enabled: row.enabled }));
   return includeDisabled ? items : items.filter((item) => item.enabled);
 }
 async function listArticles() {
@@ -1587,16 +1591,21 @@ app.get('/api/categories', async (req, res) => {
 app.post('/api/categories', requireAuth, requirePermission('content.manage'), requireCsrf, async (req, res) => {
   try {
     const name = sanitizeText(req.body.name, '', 40);
+    const parentId = sanitizeText(req.body.parentId, '', 64);
     if (!name) return res.status(400).json({ message: 'Category name is required' });
     const duplicate = await one(`SELECT id FROM categories WHERE lower(name)=lower($1)`, [name]);
     if (duplicate) return res.status(400).json({ message: 'Category already exists' });
+    if (parentId) {
+      const parent = await one(`SELECT id FROM categories WHERE id=$1`, [parentId]);
+      if (!parent) return res.status(400).json({ message: 'Parent category not found' });
+    }
     const id = crypto.randomUUID();
-    await query(`INSERT INTO categories (id, name, enabled) VALUES ($1, $2, TRUE)`, [id, name]);
+    await query(`INSERT INTO categories (id, name, parent_id, enabled) VALUES ($1, $2, $3, TRUE)`, [id, name, parentId || null]);
     const settings = await getSettings();
     settings.visibleSections[name] = true;
     await setSetting('visibleSections', settings.visibleSections);
     await addAuditLog(req, 'category.created', 'category', id, name);
-    res.json({ ok: true, category: { id, name, enabled: true } });
+    res.json({ ok: true, category: { id, name, parentId, enabled: true } });
   } catch (_error) {
     res.status(500).json({ message: 'Failed to create category' });
   }
@@ -1604,19 +1613,26 @@ app.post('/api/categories', requireAuth, requirePermission('content.manage'), re
 
 app.put('/api/categories/:id', requireAuth, requirePermission('content.manage'), requireCsrf, async (req, res) => {
   try {
-    const existing = await one(`SELECT id, name, enabled FROM categories WHERE id=$1`, [req.params.id]);
+    const existing = await one(`SELECT id, name, parent_id, enabled FROM categories WHERE id=$1`, [req.params.id]);
     if (!existing) return res.status(404).json({ message: 'Category not found' });
     const newName = sanitizeText(req.body.name, existing.name, 40);
+    const parentId = req.body.parentId !== undefined ? sanitizeText(req.body.parentId, '', 64) : (existing.parent_id || '');
     const enabled = req.body.enabled !== undefined ? Boolean(req.body.enabled) : existing.enabled;
+    if (parentId && parentId === req.params.id) return res.status(400).json({ message: 'Category cannot be its own parent' });
+    if (parentId) {
+      const parent = await one(`SELECT id FROM categories WHERE id=$1`, [parentId]);
+      if (!parent) return res.status(400).json({ message: 'Parent category not found' });
+    }
     const duplicate = await one(`SELECT id FROM categories WHERE lower(name)=lower($1) AND id <> $2`, [newName, req.params.id]);
     if (duplicate) return res.status(400).json({ message: 'Category already exists' });
 
-    await query(`UPDATE categories SET name=$2, enabled=$3 WHERE id=$1`, [req.params.id, newName, enabled]);
+    await query(`UPDATE categories SET name=$2, parent_id=$3, enabled=$4 WHERE id=$1`, [req.params.id, newName, parentId || null, enabled]);
     if (existing.name !== newName) {
       await query(`
         UPDATE articles
-        SET category = $2, data = jsonb_set(data, '{category}', to_jsonb($2::text), true)
-        WHERE category = $1
+        SET category = $2,
+            data = jsonb_set(jsonb_set(data, '{category}', to_jsonb($2::text), true), '{subcategory}', CASE WHEN data->>'subcategory' = $1 THEN to_jsonb($2::text) ELSE COALESCE(data->'subcategory','""'::jsonb) END, true)
+        WHERE category = $1 OR data->>'subcategory' = $1
       `, [existing.name, newName]);
       const settings = await getSettings();
       settings.visibleSections[newName] = settings.visibleSections[existing.name] ?? true;
@@ -1624,7 +1640,7 @@ app.put('/api/categories/:id', requireAuth, requirePermission('content.manage'),
       await setSetting('visibleSections', settings.visibleSections);
     }
     await addAuditLog(req, 'category.updated', 'category', req.params.id, `${existing.name} -> ${newName}`);
-    res.json({ ok: true, category: { id: req.params.id, name: newName, enabled } });
+    res.json({ ok: true, category: { id: req.params.id, name: newName, parentId, enabled } });
   } catch (_error) {
     res.status(500).json({ message: 'Failed to update category' });
   }
