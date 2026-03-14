@@ -527,83 +527,79 @@ $('#sectionToggles').addEventListener('click', (e) => {
   btn.classList.toggle('primary', !active);
   btn.classList.toggle('ghost', active);
 });
-function handleLogoUploadClick(e) {
-  e.preventDefault();
-  console.log('[admin] upload button clicked');
-
-  const input = document.getElementById('logoInput');
-  const fileCount = input?.files?.length || 0;
-  const file = input && input.files && input.files[0];
-  console.log('[admin] selected file count / file name:', fileCount, file?.name || '(none)');
-
+async function uploadSettingsImage({ inputId, buttonId, endpoint, fieldName, message }) {
+  const input = document.getElementById(inputId);
+  const button = document.getElementById(buttonId);
+  const file = input?.files?.[0];
   if (!file) {
-    console.log('[admin] no file selected');
-    return alert('Please choose a logo file first');
+    alert('Please choose an image file first');
+    return;
   }
-
-  console.log('[admin] selected file:', file.name);
-
-  const fd = new FormData();
-  fd.append('logo', file);
-
-  const csrfToken = state.csrfToken || '';
-  console.log('[admin] csrf token found:', csrfToken ? 'yes' : 'no');
-  if (!csrfToken) {
-    console.warn('[admin] csrf token missing before upload request');
+  const formData = new FormData();
+  formData.append(fieldName, file);
+  if (button) button.disabled = true;
+  try {
+    const data = await api(endpoint, { method: 'POST', body: formData });
+    const settingsPayload = data.settings || {};
+    state.data.settings = { ...state.data.settings, ...settingsPayload };
+    applyBranding(state.data.settings);
+    const form = $('#siteSettingsForm');
+    if (form && settingsPayload.homepageBannerImage !== undefined) form.homepageBannerImage.value = settingsPayload.homepageBannerImage || '';
+    if (form && settingsPayload.homepageSidebarAdImage !== undefined) form.homepageSidebarAdImage.value = settingsPayload.homepageSidebarAdImage || '';
+    if (input) input.value = '';
+    await refreshAdmin();
+    toast(message);
+  } catch (err) {
+    alert(err.message || 'Upload failed');
+  } finally {
+    if (button) button.disabled = false;
   }
-
-  console.log('[admin] before fetch POST');
-  console.log('[admin] sending upload request');
-
-  fetch('/api/upload/logo', {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: csrfToken ? { 'x-csrf-token': csrfToken } : undefined,
-    body: fd
-  })
-    .then(async (res) => {
-      console.log('[admin] upload response status:', res.status);
-      const data = await res.json().catch(() => ({}));
-      console.log('[admin] upload response body:', data);
-      return { res, data };
-    })
-    .then(async ({ res, data }) => {
-      if (!res.ok) throw new Error(data.message || data.error || 'Upload failed');
-
-      if (data.csrfToken) {
-        state.csrfToken = data.csrfToken;
-      }
-
-      const settingsPayload = data.settings ? data.settings : { logo: data.logo || data.url };
-      console.log('[admin] updating local/admin state with:', settingsPayload);
-
-      if (settingsPayload) {
-        state.data.settings = { ...state.data.settings, ...settingsPayload };
-        applyBranding(state.data.settings);
-      }
-
-      if (input) input.value = '';
-
-      try {
-        await refreshAdmin();
-        console.log('[admin] settings update status: success');
-      } catch (refreshErr) {
-        console.log('[admin] settings update status: failed', refreshErr);
-      }
-
-      toast('Logo uploaded');
-    })
-    .catch((err) => {
-      console.error('[admin] upload failed:', err);
-      alert(err.message || 'Upload failed');
-    });
 }
 
 function bindLogoUploadControls() {
-  const btn = document.getElementById('uploadLogoBtn');
-  if (btn && !btn.dataset.bound) {
-    btn.dataset.bound = '1';
-    btn.addEventListener('click', handleLogoUploadClick);
+  const logoBtn = document.getElementById('uploadLogoBtn');
+  if (logoBtn && !logoBtn.dataset.bound) {
+    logoBtn.dataset.bound = '1';
+    logoBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      uploadSettingsImage({
+        inputId: 'logoInput',
+        buttonId: 'uploadLogoBtn',
+        endpoint: '/api/upload/logo',
+        fieldName: 'logo',
+        message: 'Logo uploaded'
+      });
+    });
+  }
+
+  const bannerBtn = document.getElementById('uploadHomepageBannerBtn');
+  if (bannerBtn && !bannerBtn.dataset.bound) {
+    bannerBtn.dataset.bound = '1';
+    bannerBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      uploadSettingsImage({
+        inputId: 'homepageBannerImageInput',
+        buttonId: 'uploadHomepageBannerBtn',
+        endpoint: '/api/upload/homepage-banner',
+        fieldName: 'image',
+        message: 'Homepage banner image uploaded'
+      });
+    });
+  }
+
+  const sidebarBtn = document.getElementById('uploadHomepageSidebarBtn');
+  if (sidebarBtn && !sidebarBtn.dataset.bound) {
+    sidebarBtn.dataset.bound = '1';
+    sidebarBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      uploadSettingsImage({
+        inputId: 'homepageSidebarAdImageInput',
+        buttonId: 'uploadHomepageSidebarBtn',
+        endpoint: '/api/upload/homepage-sidebar',
+        fieldName: 'image',
+        message: 'Homepage sidebar image uploaded'
+      });
+    });
   }
 }
 $('#categoryForm').addEventListener('submit', async (e) => {
@@ -967,10 +963,6 @@ $('#adminAiForm')?.addEventListener('submit', async (e) => {
     output.textContent = err.message;
   }
 });
-const logoInputEl = document.getElementById('logoInput');
-const uploadLogoBtnEl = document.getElementById('uploadLogoBtn');
-console.log('[admin] logo upload control IDs check', { logoInputFound: Boolean(logoInputEl), uploadLogoBtnFound: Boolean(uploadLogoBtnEl) });
-
 $('#backupBtn').addEventListener('click', () => window.open('/api/admin/backup.json', '_blank', 'noopener'));
 checkSession().catch(() => {
   toast('Server not running');

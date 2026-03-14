@@ -1551,6 +1551,31 @@ app.post('/api/upload/logo', requireAuth, requirePermission('content.manage'), r
   }
 });
 
+
+app.post('/api/upload/homepage-banner', requireAuth, requirePermission('content.manage'), requireCsrf, sensitiveLimiter, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'Banner image file is required' });
+    const image = `/uploads/${req.file.filename}`;
+    await setSetting('homepageBannerImage', image);
+    await addAuditLog(req, 'settings.homepage_banner_uploaded', 'settings', 'homepageBannerImage', image);
+    res.json({ ok: true, url: image, settings: await getSettings() });
+  } catch (_error) {
+    res.status(500).json({ message: 'Banner image upload failed' });
+  }
+});
+
+app.post('/api/upload/homepage-sidebar', requireAuth, requirePermission('content.manage'), requireCsrf, sensitiveLimiter, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'Sidebar image file is required' });
+    const image = `/uploads/${req.file.filename}`;
+    await setSetting('homepageSidebarAdImage', image);
+    await addAuditLog(req, 'settings.homepage_sidebar_uploaded', 'settings', 'homepageSidebarAdImage', image);
+    res.json({ ok: true, url: image, settings: await getSettings() });
+  } catch (_error) {
+    res.status(500).json({ message: 'Sidebar image upload failed' });
+  }
+});
+
 app.get('/api/categories', async (req, res) => {
   try {
     res.json(await listCategories(true));
