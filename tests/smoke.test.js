@@ -98,3 +98,16 @@ test('login supports username or email identity', () => {
   assert.match(server, /findUserByEmail\(normalized, includeSecrets\)/);
   assert.match(server, /Invalid username\/email or password/);
 });
+
+
+test('homepage advertisement settings are wired in admin, API, and public UI', () => {
+  assert.match(adminHtml, /name="homepageBannerImage"/);
+  assert.match(adminHtml, /name="homepageSidebarAdImage"/);
+  assert.match(adminJs, /homepageBannerEnabled/);
+  assert.match(adminJs, /homepageSidebarAdEnabled/);
+  assert.match(indexHtml, /id="homepageBannerAd"/);
+  assert.match(indexHtml, /id="homepageSidebarAd"/);
+  assert.match(server, /homepageBannerImage/);
+  assert.match(server, /homepageSidebarAdImage/);
+  assert.match(styles, /\.ad-slot/);
+});
