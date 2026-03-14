@@ -138,6 +138,7 @@
         const canShowSidebar = !!(desktop && s.homepageSidebarAdEnabled && s.homepageSidebarAdImage);
         sidebarMount.textContent = '';
         sidebarMount.classList.toggle('hidden', !canShowSidebar);
+        byId('heroGrid')?.classList.toggle('hero-grid--no-sidebar', !canShowSidebar);
         if (canShowSidebar) {
           const label = document.createElement('div');
           label.className = 'ad-label';
@@ -151,13 +152,17 @@
       const items = filteredArticles().filter((item) => item.trending || item.featured).slice(0, 6);
       const mount = byId('trendingList');
       mount.textContent = '';
+      const heroGrid = byId('heroGrid');
+      const trendingCard = byId('trendingCard');
       if(!items.length){
-        const empty = document.createElement('div');
-        empty.className = 'empty';
-        empty.textContent = 'कोई ट्रेंडिंग खबर नहीं';
-        mount.appendChild(empty);
+        heroGrid?.classList.add('hero-grid--no-trending');
+        heroGrid?.classList.remove('hero-grid--minimal-trending');
+        trendingCard?.classList.add('hidden');
         return;
       }
+      heroGrid?.classList.remove('hero-grid--no-trending');
+      heroGrid?.classList.toggle('hero-grid--minimal-trending', items.length <= 2);
+      trendingCard?.classList.remove('hidden');
       items.forEach((item) => {
         const card = document.createElement('div');
         card.className = 'mini-story';
